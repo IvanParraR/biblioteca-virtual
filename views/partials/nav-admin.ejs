@@ -1,0 +1,43 @@
+<header class="site-header">
+  <div class="container header-inner">
+    <a href="/admin/dashboard" class="brand">
+      <span class="brand-mark">B</span>
+      <span>
+        <%= schoolName || schoolNameGlobal %>
+        <span class="brand-sub">Panel de administración</span>
+      </span>
+    </a>
+    <nav class="desktop-nav" aria-label="Navegación de administración">
+      <span style="color: var(--gold-500); font-size: 0.86rem; margin-right: 8px;"><%= admin ? admin.full_name || admin.username : '' %></span>
+      <form action="/admin/logout" method="POST" style="margin:0;">
+        <button type="submit" class="header-cta" style="border:none; cursor:pointer;">Cerrar sesión</button>
+      </form>
+    </nav>
+  </div>
+</header>
+
+<div class="admin-shell">
+  <aside class="admin-sidebar">
+    <a href="/admin/dashboard" class="<%= currentPath === '/admin/dashboard' ? 'active' : '' %>">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+      Panel general
+    </a>
+    <a href="/admin/books" class="<%= currentPath === '/admin/books' ? 'active' : '' %>">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5a2 2 0 012-2h9v18H6a2 2 0 01-2-2V5z"/><path d="M15 3h3a2 2 0 012 2v14a2 2 0 01-2 2h-3"/></svg>
+      Libros
+    </a>
+    <a href="/admin/books/new" class="<%= currentPath === '/admin/books/new' ? 'active' : '' %>">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>
+      Agregar libro
+    </a>
+    <a href="/admin/books/import" class="<%= currentPath === '/admin/books/import' ? 'active' : '' %>">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+      Importar CSV
+    </a>
+    <a href="/" target="_blank">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><path d="M15 3h6v6M10 14L21 3"/></svg>
+      Ver sitio de estudiantes
+    </a>
+  </aside>
+
+  <main class="admin-main">

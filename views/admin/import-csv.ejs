@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es">
+<%- include('../partials/head') %>
+<body>
+  <%- include('../partials/nav-admin') %>
+
+  <div class="admin-page-head">
+    <div>
+      <h1 style="margin-bottom:2px;">Importar libros desde CSV</h1>
+      <p style="color:var(--ink-600); font-size:0.9rem;">Carga masiva para agregar muchos libros de una sola vez.</p>
+    </div>
+  </div>
+
+  <% if (successMsg && successMsg.length) { %><div class="alert alert-success"><%= successMsg[0] %></div><% } %>
+  <% if (errorMsg && errorMsg.length) { %><div class="alert alert-error"><%= errorMsg[0] %></div><% } %>
+
+  <div class="form-card">
+    <h3 style="font-size:1rem; margin-bottom:10px;">Formato esperado del archivo</h3>
+    <p style="font-size:0.86rem; color:var(--ink-600); margin-bottom:14px;">
+      La primera fila debe contener los encabezados de columna. Campos obligatorios: <code>title</code>, <code>author</code>, <code>isbn</code>, <code>category</code>.
+    </p>
+    <div class="file-drop" style="text-align:left; margin-bottom:22px; font-family:var(--font-mono); font-size:0.78rem; overflow-x:auto; white-space:pre;">title,author,isbn,category,description,publisher,publication_year,total_copies,location
+El Quijote,Miguel de Cervantes,9788420412146,Literatura,Novela clásica española,Editorial X,1605,3,Estante L-01</div>
+
+    <form action="/admin/books/import" method="POST" enctype="multipart/form-data">
+      <div class="field field-full" style="margin-bottom:20px;">
+        <label for="csvFile">Archivo CSV</label>
+        <input type="file" id="csvFile" name="csvFile" accept=".csv" required>
+        <span class="field-hint">Máximo 10MB.</span>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <button type="submit" class="btn btn-gold">Importar libros</button>
+        <a href="/admin/books" class="btn btn-outline">Cancelar</a>
+      </div>
+    </form>
+  </div>
+
+  <%- include('../partials/footer-admin') %>
+</body>
+</html>

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="es">
+<%- include('../partials/head') %>
+<body class="has-bottom-nav">
+  <%- include('../partials/nav-student') %>
+
+  <div class="container" style="padding-top:32px; padding-bottom:60px;">
+    <h1>Categorías</h1>
+    <p style="color:var(--ink-600); margin-bottom:28px;">Explora el catálogo organizado por área temática.</p>
+
+    <% if (categories.length > 0) { %>
+      <div class="category-grid">
+        <% categories.forEach(c => { %>
+          <a href="/catalogo?category=<%= encodeURIComponent(c.category) %>" class="category-pill">
+            <div class="cat-name"><%= c.category %></div>
+            <div class="cat-count"><%= c.count %> título<%= c.count === 1 ? '' : 's' %></div>
+          </a>
+        <% }) %>
+      </div>
+    <% } else { %>
+      <div class="empty-state">
+        <h3>Sin categorías todavía</h3>
+        <p>Las categorías aparecerán a medida que se agreguen libros al catálogo.</p>
+      </div>
+    <% } %>
+  </div>
+
+  <%- include('../partials/footer') %>
+</body>
+</html>

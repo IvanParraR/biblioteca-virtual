@@ -1,0 +1,36 @@
+<header class="site-header">
+  <div class="container header-inner">
+    <a href="/" class="brand">
+      <span class="brand-mark">B</span>
+      <span>
+        <%= schoolName || schoolNameGlobal %>
+        <span class="brand-sub">Biblioteca Virtual</span>
+      </span>
+    </a>
+    <nav class="desktop-nav" aria-label="Navegación principal">
+      <a href="/" class="<%= currentPath === '/' ? 'active' : '' %>">Inicio</a>
+      <a href="/catalogo" class="<%= currentPath === '/catalogo' ? 'active' : '' %>">Catálogo</a>
+      <a href="/categorias" class="<%= currentPath === '/categorias' ? 'active' : '' %>">Categorías</a>
+    </nav>
+    <a href="/admin/login" class="header-cta">Acceso administrador</a>
+  </div>
+</header>
+
+<nav class="bottom-nav" aria-label="Navegación móvil">
+  <a href="/" class="<%= currentPath === '/' ? 'active' : '' %>">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg>
+    Inicio
+  </a>
+  <a href="/catalogo" class="<%= currentPath === '/catalogo' ? 'active' : '' %>">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5a2 2 0 012-2h9v18H6a2 2 0 01-2-2V5z"/><path d="M15 3h3a2 2 0 012 2v14a2 2 0 01-2 2h-3"/></svg>
+    Catálogo
+  </a>
+  <a href="/categorias" class="<%= currentPath === '/categorias' ? 'active' : '' %>">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+    Categorías
+  </a>
+  <a href="/admin/login">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+    Admin
+  </a>
+</nav>

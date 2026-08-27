@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+<%- include('../partials/head') %>
+<body class="has-bottom-nav">
+  <%- include('../partials/nav-student') %>
+
+  <section class="hero">
+    <div class="container">
+      <p class="hero-eyebrow">Catálogo digital escolar</p>
+      <h1>Encuentra tu próximo libro en la biblioteca de <%= schoolName %></h1>
+      <p>Busca por título, autor, ISBN o categoría y consulta al instante qué libros están disponibles, prestados o solo para consulta en sala.</p>
+
+      <form action="/catalogo" method="GET" class="search-card" role="search">
+        <input type="text" name="q" placeholder="Busca por título, autor, ISBN o categoría…" aria-label="Buscar libros">
+        <button type="submit">Buscar</button>
+      </form>
+      <div class="search-scopes">
+        <span>Título</span><span>Autor</span><span>ISBN</span><span>Categoría</span>
+      </div>
+    </div>
+  </section>
+
+  <% if (!dbConnected) { %>
+  <div class="container" style="margin-top:24px;">
+    <div class="alert alert-error">
+      No se pudo conectar con la base de datos MySQL. Esta es una vista de demostración — conecta tu base de datos en <code>.env</code> para ver el catálogo real.
+    </div>
+  </div>
+  <% } %>
+
+  <section class="section container">
+    <div class="section-head">
+      <h2>Agregados recientemente</h2>
+      <a href="/catalogo" class="link-more">Ver catálogo completo →</a>
+    </div>
+
+    <% if (recent && recent.length > 0) { %>
+      <div class="book-grid">
+        <% recent.forEach(b => { %>
+          <%- include('../partials/book-card', { b }) %>
+        <% }) %>
+      </div>
+    <% } else { %>
+      <div class="empty-state">
+        <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 5a2 2 0 012-2h9v18H6a2 2 0 01-2-2V5z"/><path d="M15 3h3a2 2 0 012 2v14a2 2 0 01-2 2h-3"/></svg>
+        <h3>Aún no hay libros en el catálogo</h3>
+        <p>Cuando el administrador agregue libros, aparecerán aquí automáticamente.</p>
+      </div>
+    <% } %>
+  </section>
+
+  <section class="section container" style="padding-top:0;">
+    <div class="section-head">
+      <h2>Explora por categoría</h2>
+      <a href="/categorias" class="link-more">Ver todas →</a>
+    </div>
+
+    <% if (categories && categories.length > 0) { %>
+      <div class="category-grid">
+        <% categories.slice(0, 8).forEach(c => { %>
+          <a href="/catalogo?category=<%= encodeURIComponent(c.category) %>" class="category-pill">
+            <div class="cat-name"><%= c.category %></div>
+            <div class="cat-count"><%= c.count %> título<%= c.count === 1 ? '' : 's' %></div>
+          </a>
+        <% }) %>
+      </div>
+    <% } else { %>
+      <div class="empty-state">
+        <h3>Sin categorías todavía</h3>
+        <p>Las categorías aparecerán a medida que se agreguen libros al catálogo.</p>
+      </div>
+    <% } %>
+  </section>
+
+  <%- include('../partials/footer') %>
+</body>
+</html>

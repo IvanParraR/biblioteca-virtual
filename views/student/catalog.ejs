@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<%- include('../partials/head') %>
+<body class="has-bottom-nav">
+  <%- include('../partials/nav-student') %>
+
+  <div class="container" style="padding-top:32px;">
+    <h1>Catálogo completo</h1>
+    <p style="color:var(--ink-600); margin-bottom:28px;">
+      <%= total %> libro<%= total === 1 ? '' : 's' %> en el catálogo
+      <% if (filters.q) { %> · resultados para "<%= filters.q %>"<% } %>
+    </p>
+
+    <form action="/catalogo" method="GET" class="filter-bar">
+      <div class="field" style="grid-column: span 2;">
+        <label for="q">Buscar</label>
+        <input type="text" id="q" name="q" value="<%= filters.q %>" placeholder="Título, autor o ISBN…">
+      </div>
+      <div class="field">
+        <label for="category">Categoría</label>
+        <select id="category" name="category">
+          <option value="">Todas</option>
+          <% categories.forEach(c => { %>
+            <option value="<%= c.category %>" <%= filters.category === c.category ? 'selected' : '' %>><%= c.category %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="field">
+        <label for="availability">Disponibilidad</label>
+        <select id="availability" name="availability">
+          <option value="">Todas</option>
+          <option value="disponible" <%= filters.availability === 'disponible' ? 'selected' : '' %>>Disponible</option>
+          <option value="prestado" <%= filters.availability === 'prestado' ? 'selected' : '' %>>Prestado</option>
+          <option value="solo_biblioteca" <%= filters.availability === 'solo_biblioteca' ? 'selected' : '' %>>Disponible en biblioteca</option>
+          <option value="no_disponible" <%= filters.availability === 'no_disponible' ? 'selected' : '' %>>No disponible</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="author">Autor</label>
+        <input list="authors-list" id="author" name="author" type="text" value="<%= filters.author %>" placeholder="Cualquiera">
+        <datalist id="authors-list">
+          <% authors.forEach(a => { %><option value="<%= a %>"><% }) %>
+        </datalist>
+      </div>
+      <div class="field">
+        <label for="sort">Ordenar por</label>
+        <select id="sort" name="sort">
+          <option value="title" <%= filters.sort === 'title' ? 'selected' : '' %>>Título</option>
+          <option value="author" <%= filters.sort === 'author' ? 'selected' : '' %>>Autor</option>
+          <option value="publication_year" <%= filters.sort === 'publication_year' ? 'selected' : '' %>>Año de publicación</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="order">Orden</label>
+        <select id="order" name="order">
+          <option value="asc" <%= filters.order === 'asc' ? 'selected' : '' %>>Ascendente</option>
+          <option value="desc" <%= filters.order === 'desc' ? 'selected' : '' %>>Descendente</option>
+        </select>
+      </div>
+      <div class="field">
+        <button type="submit" class="btn btn-primary btn-block">Aplicar filtros</button>
+      </div>
+    </form>
+
+    <% if (books.length > 0) { %>
+      <div class="book-grid">
+        <% books.forEach(b => { %>
+          <%- include('../partials/book-card', { b }) %>
+        <% }) %>
+      </div>
+
+      <% if (totalPages > 1) { %>
+        <nav class="pagination" aria-label="Paginación">
+          <% for (let p = 1; p <= totalPages; p++) { %>
+            <% const qs = new URLSearchParams({...filters, page: p}).toString(); %>
+            <% if (p === currentPage) { %>
+              <span class="current"><%= p %></span>
+            <% } else { %>
+              <a href="/catalogo?<%= qs %>"><%= p %></a>
+            <% } %>
+          <% } %>
+        </nav>
+      <% } %>
+    <% } else { %>
+      <div class="empty-state">
+        <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <h3>No encontramos libros con esos filtros</h3>
+        <p>Intenta con otro término de búsqueda o quita algunos filtros para ver más resultados.</p>
+        <div style="margin-top:18px;"><a href="/catalogo" class="btn btn-outline">Limpiar filtros</a></div>
+      </div>
+    <% } %>
+  </div>
+
+  <%- include('../partials/footer') %>
+</body>
+</html>

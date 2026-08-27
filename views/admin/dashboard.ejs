@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<%- include('../partials/head') %>
+<body>
+  <%- include('../partials/nav-admin') %>
+
+  <div class="admin-page-head">
+    <div>
+      <h1 style="margin-bottom:2px;">Panel general</h1>
+      <p style="color:var(--ink-600); font-size:0.9rem;">Resumen del estado actual del catálogo.</p>
+    </div>
+    <a href="/admin/books/new" class="btn btn-gold">+ Agregar libro</a>
+  </div>
+
+  <% if (successMsg && successMsg.length) { %><div class="alert alert-success"><%= successMsg[0] %></div><% } %>
+  <% if (errorMsg && errorMsg.length) { %><div class="alert alert-error"><%= errorMsg[0] %></div><% } %>
+  <% if (!dbConnected) { %>
+    <div class="alert alert-error">No se pudo conectar con MySQL. Revisa las credenciales en tu archivo <code>.env</code> y que hayas importado <code>database/schema.sql</code>.</div>
+  <% } %>
+
+  <div class="stat-grid">
+    <div class="stat-card accent">
+      <div class="stat-label">Total de libros</div>
+      <div class="stat-value"><%= stats.totals.total_books %></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total de copias</div>
+      <div class="stat-value"><%= stats.totals.total_copies %></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Copias disponibles</div>
+      <div class="stat-value"><%= stats.totals.available_copies %></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Copias prestadas</div>
+      <div class="stat-value"><%= stats.totals.borrowed_copies %></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Libros no disponibles</div>
+      <div class="stat-value"><%= stats.totals.unavailable_books %></div>
+    </div>
+  </div>
+
+  <div style="display:grid; grid-template-columns: 1.3fr 1fr; gap:24px;" class="dash-grid">
+    <div class="table-wrap" style="padding:24px;">
+      <h2 style="font-size:1.1rem; margin-bottom:18px;">Disponibilidad por categoría</h2>
+      <% if (stats.byCategory.length > 0) { %>
+        <div class="bar-chart">
+          <% const maxCount = Math.max(...stats.byCategory.map(c => c.book_count), 1); %>
+          <% stats.byCategory.forEach(c => { %>
+            <div class="bar-row">
+              <span class="bar-label"><%= c.category %></span>
+              <div class="bar-track"><div class="bar-fill" style="width: <%= (c.book_count / maxCount) * 100 %>%;"></div></div>
+              <span class="bar-value"><%= c.available_copies %>/<%= c.total_copies %></span>
+            </div>
+          <% }) %>
+        </div>
+      <% } else { %>
+        <p style="color:var(--ink-400); font-size:0.88rem;">Aún no hay libros para mostrar estadísticas.</p>
+      <% } %>
+    </div>
+
+    <div class="table-wrap" style="padding:24px;">
+      <h2 style="font-size:1.1rem; margin-bottom:18px;">Agregados recientemente</h2>
+      <% if (stats.recent.length > 0) { %>
+        <div style="display:flex; flex-direction:column; gap:14px;">
+          <% stats.recent.forEach(b => { %>
+            <a href="/admin/books/<%= b.id %>/edit" style="display:flex; gap:12px; align-items:center;">
+              <div class="table-cover">
+                <% if (b.cover_url) { %><img src="<%= b.cover_url %>" alt=""><% } %>
+              </div>
+              <div style="min-width:0;">
+                <div style="font-weight:600; font-size:0.88rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><%= b.title %></div>
+                <div style="font-size:0.78rem; color:var(--ink-400);"><%= b.author %></div>
+              </div>
+            </a>
+          <% }) %>
+        </div>
+      <% } else { %>
+        <p style="color:var(--ink-400); font-size:0.88rem;">Sin actividad reciente todavía.</p>
+      <% } %>
+    </div>
+  </div>
+
+  <style>
+    @media (max-width: 900px) { .dash-grid { grid-template-columns: 1fr !important; } }
+  </style>
+
+  <%- include('../partials/footer-admin') %>
+</body>
+</html>

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<%- include('../partials/head') %>
+<body class="has-bottom-nav">
+  <%- include('../partials/nav-student') %>
+
+  <div class="container" style="padding-top:32px; padding-bottom:60px;">
+    <p class="breadcrumb"><a href="/">Inicio</a> / <a href="/catalogo">Catálogo</a> / <%= book.title %></p>
+
+    <div class="book-detail">
+      <div class="book-detail-cover">
+        <% if (book.cover_url) { %>
+          <img src="<%= book.cover_url %>" alt="Portada de <%= book.title %>">
+        <% } else { %>
+          <div class="skeleton" style="width:100%; aspect-ratio: 3/4.4;"></div>
+        <% } %>
+      </div>
+
+      <div>
+        <span class="badge badge-<%= book.status %>"><%= book.status_label %></span>
+        <div class="detail-title-row" style="margin-top:12px;">
+          <h1><%= book.title %></h1>
+        </div>
+        <p class="detail-author">por <%= book.author %></p>
+
+        <% if (book.description) { %>
+          <p class="detail-desc"><%= book.description %></p>
+        <% } %>
+
+        <div class="availability-card">
+          <div>
+            <div class="avail-count">
+              <% if (book.status === 'no_disponible') { %>
+                0 de <%= book.total_copies %>
+              <% } else { %>
+                <%= book.available_copies %> de <%= book.total_copies %>
+              <% } %>
+            </div>
+            <div class="avail-label">copias disponibles</div>
+          </div>
+          <div style="text-align:right;">
+            <div class="avail-label" style="margin-bottom:2px;">Ubicación</div>
+            <div style="font-family:var(--font-mono); font-size:0.9rem;"><%= book.location || 'No especificada' %></div>
+          </div>
+        </div>
+
+        <div class="info-grid">
+          <div class="info-item">
+            <div class="info-label">Categoría</div>
+            <div class="info-value"><%= book.category %></div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">ISBN</div>
+            <div class="info-value"><%= book.isbn %></div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Editorial</div>
+            <div class="info-value"><%= book.publisher || '—' %></div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Año de publicación</div>
+            <div class="info-value"><%= book.publication_year || '—' %></div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Copias totales</div>
+            <div class="info-value"><%= book.total_copies %></div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Estado</div>
+            <div class="info-value"><%= book.status_label %></div>
+          </div>
+        </div>
+
+        <div style="margin-top:28px;">
+          <a href="/catalogo" class="btn btn-outline">← Volver al catálogo</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <%- include('../partials/footer') %>
+</body>
+</html>

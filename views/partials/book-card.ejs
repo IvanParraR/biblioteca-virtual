@@ -1,0 +1,24 @@
+<a href="/libro/<%= b.id %>" class="book-card">
+  <div class="book-cover">
+    <% if (b.cover_url) { %>
+      <img src="<%= b.cover_url %>" alt="Portada de <%= b.title %>" loading="lazy">
+    <% } else { %>
+      <div class="skeleton" style="width:100%; height:100%;"></div>
+    <% } %>
+  </div>
+  <div class="book-card-body">
+    <span class="book-category-tag"><%= b.category %></span>
+    <h3 class="book-title"><%= b.title %></h3>
+    <p class="book-author"><%= b.author %></p>
+    <div class="book-meta-row">
+      <span class="badge badge-<%= b.status %>"><%= b.status_label %></span>
+    </div>
+    <p class="copies-note">
+      <% if (b.status === 'no_disponible') { %>
+        Sin copias en catálogo
+      <% } else { %>
+        <%= b.available_copies %> disponible<%= b.available_copies === 1 ? '' : 's' %> de <%= b.total_copies %>
+      <% } %>
+    </p>
+  </div>
+</a>

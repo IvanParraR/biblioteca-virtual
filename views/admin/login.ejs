@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="es">
+<%- include('../partials/head') %>
+<body>
+  <div class="login-shell">
+    <div class="login-card">
+      <div class="brand-mark">B</div>
+      <h1>Acceso administrador</h1>
+      <p class="login-sub"><%= schoolName %> · Panel de gestión de biblioteca</p>
+
+      <% if (errorMsg && errorMsg.length) { %>
+        <div class="alert alert-error"><%= errorMsg[0] %></div>
+      <% } %>
+
+      <form action="/admin/login" method="POST">
+        <div class="field" style="margin-bottom:14px;">
+          <label for="username">Usuario</label>
+          <input type="text" id="username" name="username" required autofocus placeholder="admin">
+        </div>
+        <div class="field" style="margin-bottom:22px;">
+          <label for="password">Contraseña</label>
+          <input type="password" id="password" name="password" required placeholder="••••••••">
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Iniciar sesión</button>
+      </form>
+
+      <p style="text-align:center; margin-top:22px; font-size:0.82rem; color:var(--ink-400);">
+        <a href="/" style="color:var(--forest-700); font-weight:600;">← Volver al catálogo de estudiantes</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>

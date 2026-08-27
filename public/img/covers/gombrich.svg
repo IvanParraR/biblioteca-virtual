@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="440" viewBox="0 0 300 440">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1F3A2E"/>
+      <stop offset="100%" stop-color="#14261C"/>
+    </linearGradient>
+  </defs>
+  <rect width="300" height="440" fill="url(#g)"/>
+  <rect x="14" y="14" width="272" height="412" fill="none" stroke="#C9A227" stroke-width="1.5" opacity="0.55"/>
+  <rect x="20" y="20" width="260" height="400" fill="none" stroke="#C9A227" stroke-width="0.75" opacity="0.35"/>
+  <circle cx="150" cy="120" r="30" fill="none" stroke="#C9A227" stroke-width="1.5" opacity="0.7"/>
+  <path d="M136 120 h28 M150 106 v28" stroke="#C9A227" stroke-width="1.5" opacity="0.7"/>
+  <text x="90" y="230" font-family="Georgia, 'Times New Roman', serif" font-size="22" fill="#F7F4EC" font-weight="600" text-anchor="start"><tspan x="90" dy="0">Historia del</tspan><tspan x="90" dy="30">Arte</tspan></text>
+  <text x="20" y="400" font-family="Georgia, serif" font-size="13" fill="#C9A227" letter-spacing="0.5">Ernst Gombrich</text>
+</svg>
