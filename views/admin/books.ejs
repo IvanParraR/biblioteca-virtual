@@ -75,11 +75,11 @@
 
                   <form action="/admin/books/<%= b.id %>/add-copies" method="POST" style="display:inline; margin:0;">
                     <input type="hidden" name="amount" value="1">
-                    <button type="submit" class="btn btn-outline btn-sm" title="Agregar 1 copia">+1</button>
+                    <button type="submit" class="btn btn-outline btn-sm" title="Marcar 1 copia como disponible (ej. se devolvió)" <%= b.available_copies >= b.total_copies ? 'disabled' : '' %>>+1</button>
                   </form>
                   <form action="/admin/books/<%= b.id %>/remove-copies" method="POST" style="display:inline; margin:0;">
                     <input type="hidden" name="amount" value="1">
-                    <button type="submit" class="btn btn-outline btn-sm" title="Quitar 1 copia" <%= b.total_copies === 0 ? 'disabled' : '' %>>-1</button>
+                    <button type="submit" class="btn btn-outline btn-sm" title="Marcar 1 copia como no disponible (ej. se prestó)" <%= b.available_copies === 0 ? 'disabled' : '' %>>-1</button>
                   </form>
 
                   <button type="button" class="btn btn-danger btn-sm js-delete-trigger" data-title="<%= b.title %>" data-action="/admin/books/<%= b.id %>/delete">Eliminar</button>

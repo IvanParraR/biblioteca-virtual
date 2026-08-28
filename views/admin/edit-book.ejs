@@ -52,6 +52,11 @@
           <label for="publication_year">Año de publicación</label>
           <input type="number" id="publication_year" name="publication_year" min="1400" max="2100" value="<%= book.publication_year || '' %>">
         </div>
+        <div class="field">
+          <label for="total_copies">Número de copias totales *</label>
+          <input type="number" id="total_copies" name="total_copies" min="0" required value="<%= book.total_copies %>">
+          <span class="field-hint">Cambiar este número no afecta cuántas están disponibles ahora mismo, salvo que lo reduzcas por debajo de las disponibles actuales.</span>
+        </div>
         <div class="field field-full">
           <label for="location">Ubicación en la biblioteca</label>
           <input type="text" id="location" name="location" value="<%= book.location || '' %>">
@@ -79,8 +84,8 @@
       </div>
 
       <div style="background:var(--paper); border:1px solid var(--line); border-radius:var(--radius-sm); padding:14px 16px; margin-top:18px; font-size:0.85rem; color:var(--ink-600);">
-        Copias totales: <strong><%= book.total_copies %></strong> · Disponibles: <strong><%= book.available_copies %></strong>.
-        Para cambiar el número de copias, usa los botones <strong>+1 / -1</strong> en la tabla de libros.
+        Copias disponibles ahora mismo: <strong><%= book.available_copies %></strong> de <%= book.total_copies %>.
+        Para prestar o devolver un ejemplar sin cambiar el total, usa los botones <strong>+1 / -1</strong> en la tabla de libros.
       </div>
 
       <div style="display:flex; gap:10px; margin-top:22px;">

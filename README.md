@@ -83,9 +83,22 @@ Las categorías viven en su propia tabla (`categories`), no como texto libre en 
 - Desde **Panel de administración → Categorías** se pueden crear, renombrar y eliminar categorías (solo si no tienen libros asignados), y **fusionar** dos categorías en una con un clic (útil para limpiar duplicados que ya existían antes de esta función).
 - La importación por CSV usa la misma lógica: si la columna `category` de una fila coincide con una categoría existente, la reutiliza.
 
-**Si ya tenías el proyecto instalado con la columna `category` como texto libre**, ejecuta la migración correspondiente (ver sección 6).
+**Si ya tenías el proyecto instalado con la columna `category` como texto libre**, ejecuta la migración correspondiente (ver sección 8).
 
-## 6. Estructura del proyecto
+## 6. Copias totales vs. copias disponibles
+
+Cada libro tiene dos números independientes:
+
+- **Copias totales** — cuántos ejemplares físicos existen en la biblioteca. Este número es **fijo** y solo se cambia desde **Editar libro**.
+- **Copias disponibles** — cuántos de esos ejemplares están en el estante ahora mismo (no prestados). Los botones **+1 / -1** de la tabla de libros solo mueven este número, simulando un préstamo (-1) o una devolución (+1) — nunca alteran el total.
+
+Reglas de los botones +1 / -1:
+- **-1** nunca deja las copias disponibles por debajo de 0 (se deshabilita automáticamente al llegar a 0).
+- **+1** nunca supera el total de copias (se deshabilita automáticamente al llegar al total).
+
+Si cambias el total de copias desde "Editar libro" (por ejemplo, porque compraste más ejemplares o se perdió uno), las disponibles se ajustan proporcionalmente de forma automática, sin afectar los ejemplares que ya estaban prestados.
+
+## 7. Estructura del proyecto
 
 ```
 biblioteca-virtual/
@@ -111,7 +124,7 @@ biblioteca-virtual/
     └── uploads/covers/              # Portadas subidas por el administrador
 ```
 
-## 7. Cuenta de administrador de prueba
+## 8. Cuenta de administrador de prueba
 
 ```
 Usuario:     admin
@@ -162,7 +175,7 @@ Esto crea la tabla `categories`, agrupa tus categorías de texto existentes (rec
 
 Todos los scripts SQL de este proyecto incluyen `SET NAMES utf8mb4;`, lo que evita que tildes y eñes se corrompan (ej. "MatemÃ¡ticas" en vez de "Matemáticas") sin importar la configuración regional de tu instalación de MySQL. Si aun así ves caracteres corruptos, verifica que tu terminal esté usando UTF-8.
 
-## 8. Importación masiva por CSV
+## 9. Importación masiva por CSV
 
 Desde **Panel de administración → Importar CSV**, se puede subir un archivo `.csv` con esta estructura:
 
@@ -173,7 +186,7 @@ El Quijote,Miguel de Cervantes,9788420412146,Literatura,Novela clásica español
 
 Campos obligatorios: `title`, `author`, `isbn`, `category`. Los demás son opcionales.
 
-## 9. Próximos pasos sugeridos
+## 10. Próximos pasos sugeridos
 
 - Implementar el flujo completo de préstamos (solicitud, devolución, historial).
 - Agregar recuperación de contraseña para administradores.

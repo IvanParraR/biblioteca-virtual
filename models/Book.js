@@ -151,7 +151,8 @@ const Book = {
     await pool.query(
       `UPDATE books SET
         title = ?, author = ?, isbn = ?, category_id = ?, description = ?,
-        publisher = ?, publication_year = ?, cover_url = ?, location = ?, library_only = ?
+        publisher = ?, publication_year = ?, cover_url = ?, location = ?, library_only = ?,
+        total_copies = ?, available_copies = ?
        WHERE id = ?`,
       [
         data.title,
@@ -164,6 +165,8 @@ const Book = {
         data.cover_url || null,
         data.location || null,
         data.library_only ? 1 : 0,
+        data.total_copies,
+        data.available_copies,
         id,
       ]
     );
@@ -174,20 +177,23 @@ const Book = {
   },
 
   async addCopies(id, amount) {
+    // Marca copias como disponibles (ej. se devolvió un préstamo). Nunca
+    // supera el total de copias registradas — esa cantidad solo se
+    // cambia desde "Editar libro".
     await pool.query(
-      'UPDATE books SET total_copies = total_copies + ?, available_copies = available_copies + ? WHERE id = ?',
-      [amount, amount, id]
+      'UPDATE books SET available_copies = LEAST(total_copies, available_copies + ?) WHERE id = ?',
+      [amount, id]
     );
   },
 
   async removeCopies(id, amount) {
-    // Nunca deja available_copies o total_copies en negativo, y nunca
-    // deja available_copies por encima de total_copies.
-    const [[row]] = await pool.query('SELECT total_copies, available_copies FROM books WHERE id = ?', [id]);
-    if (!row) return;
-    const newTotal = Math.max(0, row.total_copies - amount);
-    const newAvailable = Math.min(newTotal, Math.max(0, row.available_copies - amount));
-    await pool.query('UPDATE books SET available_copies = ?, total_copies = ? WHERE id = ?', [newAvailable, newTotal, id]);
+    // Marca copias como no disponibles (ej. se prestó un ejemplar).
+    // Nunca deja available_copies en negativo. El total de copias no
+    // cambia — esa cantidad solo se edita desde "Editar libro".
+    await pool.query(
+      'UPDATE books SET available_copies = GREATEST(0, available_copies - ?) WHERE id = ?',
+      [amount, id]
+    );
   },
 
   async stats() {

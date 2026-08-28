@@ -133,7 +133,7 @@ exports.showEditForm = async (req, res) => {
 
 exports.updateBook = async (req, res) => {
   try {
-    const { title, author, isbn, category_id, new_category, description, publisher, publication_year, location, library_only } = req.body;
+    const { title, author, isbn, category_id, new_category, description, publisher, publication_year, location, total_copies, library_only } = req.body;
     const existing = await Book.findById(req.params.id);
     const cover_url = req.file ? `/uploads/covers/${req.file.filename}` : existing.cover_url;
 
@@ -146,11 +146,23 @@ exports.updateBook = async (req, res) => {
       return res.redirect(`/admin/books/${req.params.id}/edit`);
     }
 
+    // El total de copias solo se cambia aquí, en "Editar libro" (los
+    // botones +1/-1 de la tabla solo mueven cuántas están disponibles,
+    // nunca el total). Si el admin sube el total, las copias nuevas se
+    // suman como disponibles; si lo baja, se restan primero de las
+    // disponibles (nunca queda available_copies por debajo de 0 ni por
+    // encima del nuevo total).
+    const newTotal = Math.max(0, parseInt(total_copies, 10) || 0);
+    const delta = newTotal - existing.total_copies;
+    const newAvailable = Math.min(newTotal, Math.max(0, existing.available_copies + delta));
+
     await Book.update(req.params.id, {
       title, author, isbn, category_id: finalCategoryId, description, publisher,
       publication_year: publication_year || null,
       cover_url, location,
       library_only: library_only === 'on',
+      total_copies: newTotal,
+      available_copies: newAvailable,
     });
 
     req.flash('success', `"${title}" se actualizó correctamente.`);
