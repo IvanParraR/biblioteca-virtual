@@ -18,6 +18,7 @@ const pool = mysql.createPool({
   connectionLimit: 10,
   queueLimit: 0,
   dateStrings: true,
+  charset: 'utf8mb4', // Evita que tildes/eñes se corrompan sin importar el charset por defecto del servidor
 });
 
 // Verificación de conexión al iniciar (no detiene el servidor si falla,

@@ -20,4 +20,15 @@ function redirectIfLoggedIn(req, res, next) {
   next();
 }
 
-module.exports = { requireAdmin, redirectIfLoggedIn };
+// Protege las rutas de gestión de administradores: solo cuentas
+// con can_manage_admins = 1 pueden crear, editar permisos o eliminar
+// otras cuentas de administrador.
+function requireAdminManager(req, res, next) {
+  if (req.session && req.session.admin && req.session.admin.can_manage_admins) {
+    return next();
+  }
+  req.flash('error', 'No tienes permiso para gestionar cuentas de administrador.');
+  return res.redirect('/admin/dashboard');
+}
+
+module.exports = { requireAdmin, redirectIfLoggedIn, requireAdminManager };

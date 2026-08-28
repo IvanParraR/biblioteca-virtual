@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="es">
+<%- include('../partials/head') %>
+<body>
+  <%- include('../partials/nav-admin') %>
+
+  <div class="admin-page-head">
+    <div>
+      <h1 style="margin-bottom:2px;">Categorías</h1>
+      <p style="color:var(--ink-600); font-size:0.9rem;">Evita duplicados: crea y gestiona las categorías desde un solo lugar.</p>
+    </div>
+  </div>
+
+  <% if (successMsg && successMsg.length) { %><div class="alert alert-success"><%= successMsg[0] %></div><% } %>
+  <% if (errorMsg && errorMsg.length) { %><div class="alert alert-error"><%= errorMsg[0] %></div><% } %>
+
+  <div class="table-wrap" style="margin-bottom:32px;">
+    <table class="admin-table">
+      <thead>
+        <tr><th>Categoría</th><th>Libros</th><th>Acciones</th></tr>
+      </thead>
+      <tbody>
+        <% categories.forEach(c => { %>
+          <tr>
+            <td data-label="Categoría">
+              <form action="/admin/categories/<%= c.id %>/rename" method="POST" style="display:flex; gap:8px; align-items:center; margin:0;">
+                <input type="text" name="name" value="<%= c.category %>" style="border:1px solid var(--line); border-radius:var(--radius-sm); padding:6px 10px; font-size:0.88rem; max-width:220px;">
+                <button type="submit" class="btn btn-outline btn-sm">Guardar</button>
+              </form>
+            </td>
+            <td data-label="Libros"><%= c.count %></td>
+            <td data-label="Acciones">
+              <div class="actions-cell" style="flex-wrap:wrap;">
+                <form action="/admin/categories/<%= c.id %>/merge" method="POST" style="display:flex; gap:6px; align-items:center; margin:0;"
+                  onsubmit="return confirm('¿Fusionar &quot;<%= c.category %>&quot; dentro de la categoría seleccionada? Todos sus libros pasarán a la otra categoría y esta se eliminará. Esta acción no se puede deshacer.');">
+                  <select name="target_id" style="border:1px solid var(--line); border-radius:var(--radius-sm); padding:5px 8px; font-size:0.78rem;">
+                    <option value="">Fusionar con…</option>
+                    <% categories.filter(other => other.id !== c.id).forEach(other => { %>
+                      <option value="<%= other.id %>"><%= other.category %></option>
+                    <% }) %>
+                  </select>
+                  <button type="submit" class="btn btn-outline btn-sm">Fusionar</button>
+                </form>
+                <form action="/admin/categories/<%= c.id %>/delete" method="POST" style="display:inline; margin:0;"
+                  onsubmit="return confirm('¿Eliminar la categoría &quot;<%= c.category %>&quot;? Solo se puede eliminar si no tiene libros asignados.');">
+                  <button type="submit" class="btn btn-danger btn-sm" <%= c.count > 0 ? 'disabled title="No se puede eliminar: tiene libros asignados"' : '' %>>Eliminar</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+        <% }) %>
+        <% if (categories.length === 0) { %>
+          <tr><td colspan="3" style="text-align:center; color:var(--ink-400); padding:24px;">Aún no hay categorías creadas.</td></tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="form-card">
+    <h2 style="font-size:1.05rem; margin-bottom:16px;">Crear nueva categoría</h2>
+    <form action="/admin/categories" method="POST" style="display:flex; gap:10px; align-items:end; flex-wrap:wrap;">
+      <div class="field" style="flex:1; min-width:200px;">
+        <label for="name">Nombre</label>
+        <input type="text" id="name" name="name" required placeholder="Ej. Filosofía">
+      </div>
+      <button type="submit" class="btn btn-gold">Crear categoría</button>
+    </form>
+    <p class="field-hint" style="margin-top:10px;">Si ya existe una categoría con un nombre muy parecido (sin importar mayúsculas o espacios), no se creará una duplicada.</p>
+  </div>
+
+  <%- include('../partials/footer-admin') %>
+</body>
+</html>

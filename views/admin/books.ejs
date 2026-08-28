@@ -28,7 +28,7 @@
       <select id="category" name="category">
         <option value="">Todas</option>
         <% categories.forEach(c => { %>
-          <option value="<%= c.category %>" <%= filters.category === c.category ? 'selected' : '' %>><%= c.category %></option>
+          <option value="<%= c.id %>" <%= String(filters.category) === String(c.id) ? 'selected' : '' %>><%= c.category %></option>
         <% }) %>
       </select>
     </div>

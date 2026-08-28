@@ -29,11 +29,21 @@
           <input type="text" id="isbn" name="isbn" required placeholder="Ej. 9780156012195">
         </div>
         <div class="field">
-          <label for="category">Categoría *</label>
-          <input type="text" id="category" name="category" required list="cat-list" placeholder="Ej. Literatura">
-          <datalist id="cat-list">
-            <% categories.forEach(c => { %><option value="<%= c.category %>"><% }) %>
-          </datalist>
+          <label for="category_id">Categoría *</label>
+          <select id="category_id" name="category_id" <%= categories.length ? 'required' : '' %>>
+            <option value="">Selecciona una categoría…</option>
+            <% categories.forEach(c => { %>
+              <option value="<%= c.id %>"><%= c.name %></option>
+            <% }) %>
+          </select>
+          <span class="field-hint">
+            ¿No está en la lista?
+            <a href="#" id="toggle-new-category" style="color:var(--forest-700); font-weight:600;">+ Agregar nueva categoría</a>
+          </span>
+          <div id="new-category-wrap" style="display:none; margin-top:8px;">
+            <input type="text" id="new_category" name="new_category" placeholder="Ej. Filosofía">
+            <span class="field-hint">Se reutilizará automáticamente si ya existe una categoría con ese nombre (sin importar mayúsculas).</span>
+          </div>
         </div>
         <div class="field">
           <label for="publisher">Editorial</label>
@@ -72,6 +82,21 @@
       </div>
     </form>
   </div>
+
+  <script>
+    document.getElementById('toggle-new-category').addEventListener('click', function (e) {
+      e.preventDefault();
+      const wrap = document.getElementById('new-category-wrap');
+      const select = document.getElementById('category_id');
+      const isHidden = wrap.style.display === 'none';
+      wrap.style.display = isHidden ? 'block' : 'none';
+      select.required = !isHidden;
+      if (isHidden) {
+        select.value = '';
+        document.getElementById('new_category').focus();
+      }
+    });
+  </script>
 
   <%- include('../partials/footer-admin') %>
 </body>

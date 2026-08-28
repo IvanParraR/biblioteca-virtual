@@ -4,6 +4,12 @@
 // deriva de available_copies / total_copies / library_only,
 // para que el catálogo nunca muestre un estado desincronizado.
 //
+// La categoría se almacena normalizada (books.category_id →
+// categories.id) para evitar duplicados como "Matemáticas" vs
+// "matematicas". Todas las consultas hacen JOIN con categories
+// y devuelven "category" (nombre) y "category_id" para que las
+// vistas existentes sigan funcionando sin cambios.
+//
 // Estados posibles:
 //   - "disponible"        → available_copies > 0 y no es solo-sala
 //   - "prestado"          → available_copies === 0 y total_copies > 0
@@ -18,6 +24,12 @@ const STATUS_LABELS = {
   solo_biblioteca: 'Disponible en biblioteca',
   no_disponible: 'No disponible',
 };
+
+const SELECT_BASE = `
+  SELECT b.*, c.name AS category
+  FROM books b
+  JOIN categories c ON b.category_id = c.id
+`;
 
 function deriveStatus(book) {
   if (Number(book.total_copies) === 0) return 'no_disponible';
@@ -36,30 +48,31 @@ const Book = {
   STATUS_LABELS,
 
   // Búsqueda + filtros + orden, con paginación simple.
+  // `category` es el ID numérico de la categoría (categories.id).
   async search({ q, category, availability, author, sort = 'title', order = 'asc', page = 1, perPage = 12 } = {}) {
     const where = [];
     const params = [];
 
     if (q) {
-      where.push('(title LIKE ? OR author LIKE ? OR isbn LIKE ?)');
+      where.push('(b.title LIKE ? OR b.author LIKE ? OR b.isbn LIKE ?)');
       params.push(`%${q}%`, `%${q}%`, `%${q}%`);
     }
     if (category) {
-      where.push('category = ?');
+      where.push('b.category_id = ?');
       params.push(category);
     }
     if (author) {
-      where.push('author LIKE ?');
+      where.push('b.author LIKE ?');
       params.push(`%${author}%`);
     }
 
-    const sortable = { title: 'title', author: 'author', publication_year: 'publication_year' };
-    const sortCol = sortable[sort] || 'title';
+    const sortable = { title: 'b.title', author: 'b.author', publication_year: 'b.publication_year' };
+    const sortCol = sortable[sort] || 'b.title';
     const sortOrder = order === 'desc' ? 'DESC' : 'ASC';
 
     const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
     const [rows] = await pool.query(
-      `SELECT * FROM books ${whereSql} ORDER BY ${sortCol} ${sortOrder}, title ASC`,
+      `${SELECT_BASE} ${whereSql} ORDER BY ${sortCol} ${sortOrder}, b.title ASC`,
       params
     );
 
@@ -80,25 +93,25 @@ const Book = {
   },
 
   async findById(id) {
-    const [rows] = await pool.query('SELECT * FROM books WHERE id = ?', [id]);
+    const [rows] = await pool.query(`${SELECT_BASE} WHERE b.id = ?`, [id]);
     return attachStatus(rows[0]);
   },
 
   async findByIsbn(isbn) {
-    const [rows] = await pool.query('SELECT * FROM books WHERE isbn = ?', [isbn]);
+    const [rows] = await pool.query(`${SELECT_BASE} WHERE b.isbn = ?`, [isbn]);
     return attachStatus(rows[0]);
   },
 
   async recent(limit = 4) {
-    const [rows] = await pool.query('SELECT * FROM books ORDER BY created_at DESC LIMIT ?', [limit]);
+    const [rows] = await pool.query(`${SELECT_BASE} ORDER BY b.created_at DESC LIMIT ?`, [limit]);
     return rows.map(attachStatus);
   },
 
+  // Lista de categorías con su conteo de libros — delega en el
+  // modelo Category para mantener una sola fuente de verdad.
   async categories() {
-    const [rows] = await pool.query(
-      'SELECT category, COUNT(*) as count FROM books GROUP BY category ORDER BY category ASC'
-    );
-    return rows;
+    const Category = require('./Category');
+    return Category.withCounts();
   },
 
   async authorsList() {
@@ -107,20 +120,20 @@ const Book = {
   },
 
   async all() {
-    const [rows] = await pool.query('SELECT * FROM books ORDER BY title ASC');
+    const [rows] = await pool.query(`${SELECT_BASE} ORDER BY b.title ASC`);
     return rows.map(attachStatus);
   },
 
   async create(data) {
     const [result] = await pool.query(
       `INSERT INTO books
-        (title, author, isbn, category, description, publisher, publication_year, cover_url, total_copies, available_copies, location, library_only)
+        (title, author, isbn, category_id, description, publisher, publication_year, cover_url, total_copies, available_copies, location, library_only)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         data.title,
         data.author,
         data.isbn,
-        data.category,
+        data.category_id,
         data.description || null,
         data.publisher || null,
         data.publication_year || null,
@@ -137,14 +150,14 @@ const Book = {
   async update(id, data) {
     await pool.query(
       `UPDATE books SET
-        title = ?, author = ?, isbn = ?, category = ?, description = ?,
+        title = ?, author = ?, isbn = ?, category_id = ?, description = ?,
         publisher = ?, publication_year = ?, cover_url = ?, location = ?, library_only = ?
        WHERE id = ?`,
       [
         data.title,
         data.author,
         data.isbn,
-        data.category,
+        data.category_id,
         data.description || null,
         data.publisher || null,
         data.publication_year || null,
@@ -188,8 +201,11 @@ const Book = {
        FROM books`
     );
     const [byCategory] = await pool.query(
-      `SELECT category, COUNT(*) as book_count, COALESCE(SUM(total_copies),0) as total_copies, COALESCE(SUM(available_copies),0) as available_copies
-       FROM books GROUP BY category ORDER BY book_count DESC`
+      `SELECT c.name AS category, COUNT(b.id) as book_count,
+        COALESCE(SUM(b.total_copies),0) as total_copies,
+        COALESCE(SUM(b.available_copies),0) as available_copies
+       FROM categories c LEFT JOIN books b ON b.category_id = c.id
+       GROUP BY c.id, c.name ORDER BY book_count DESC`
     );
     const recent = await Book.recent(5);
     return { totals, byCategory, recent };

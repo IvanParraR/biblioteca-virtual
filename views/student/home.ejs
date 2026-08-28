@@ -58,7 +58,7 @@
     <% if (categories && categories.length > 0) { %>
       <div class="category-grid">
         <% categories.slice(0, 8).forEach(c => { %>
-          <a href="/catalogo?category=<%= encodeURIComponent(c.category) %>" class="category-pill">
+          <a href="/catalogo?category=<%= c.id %>" class="category-pill">
             <div class="cat-name"><%= c.category %></div>
             <div class="cat-count"><%= c.count %> título<%= c.count === 1 ? '' : 's' %></div>
           </a>

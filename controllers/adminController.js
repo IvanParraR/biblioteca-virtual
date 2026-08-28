@@ -1,6 +1,7 @@
 const fs = require('fs');
 const csv = require('csv-parser');
 const Book = require('../models/Book');
+const Category = require('../models/Category');
 
 const SCHOOL_NAME = () => process.env.SCHOOL_NAME || 'Biblioteca Escolar';
 
@@ -56,7 +57,7 @@ exports.listBooks = async (req, res) => {
 };
 
 exports.showAddForm = async (req, res) => {
-  const categories = await Book.categories().catch(() => []);
+  const categories = await Category.all().catch(() => []);
   res.render('admin/add-book', {
     pageTitle: 'Agregar libro',
     schoolName: SCHOOL_NAME(),
@@ -68,14 +69,26 @@ exports.showAddForm = async (req, res) => {
 
 exports.createBook = async (req, res) => {
   try {
-    const { title, author, isbn, category, description, publisher, publication_year, location, total_copies, library_only } = req.body;
+    const { title, author, isbn, category_id, new_category, description, publisher, publication_year, location, total_copies, library_only } = req.body;
     const cover_url = req.file ? `/uploads/covers/${req.file.filename}` : null;
+
+    // Si el administrador escribió una categoría nueva, se crea (o se
+    // reutiliza si ya existe con otra capitalización/espacios). Si no,
+    // se usa la categoría existente seleccionada en el menú.
+    const finalCategoryId = new_category && new_category.trim()
+      ? await Category.findOrCreate(new_category)
+      : parseInt(category_id, 10);
+
+    if (!finalCategoryId) {
+      req.flash('error', 'Selecciona una categoría existente o escribe una nueva.');
+      return res.redirect('/admin/books/new');
+    }
 
     await Book.create({
       title,
       author,
       isbn,
-      category,
+      category_id: finalCategoryId,
       description,
       publisher,
       publication_year: publication_year || null,
@@ -103,7 +116,7 @@ exports.showEditForm = async (req, res) => {
       req.flash('error', 'Libro no encontrado.');
       return res.redirect('/admin/books');
     }
-    const categories = await Book.categories();
+    const categories = await Category.all();
     res.render('admin/edit-book', {
       pageTitle: `Editar: ${book.title}`,
       schoolName: SCHOOL_NAME(),
@@ -120,12 +133,21 @@ exports.showEditForm = async (req, res) => {
 
 exports.updateBook = async (req, res) => {
   try {
-    const { title, author, isbn, category, description, publisher, publication_year, location, library_only } = req.body;
+    const { title, author, isbn, category_id, new_category, description, publisher, publication_year, location, library_only } = req.body;
     const existing = await Book.findById(req.params.id);
     const cover_url = req.file ? `/uploads/covers/${req.file.filename}` : existing.cover_url;
 
+    const finalCategoryId = new_category && new_category.trim()
+      ? await Category.findOrCreate(new_category)
+      : parseInt(category_id, 10);
+
+    if (!finalCategoryId) {
+      req.flash('error', 'Selecciona una categoría existente o escribe una nueva.');
+      return res.redirect(`/admin/books/${req.params.id}/edit`);
+    }
+
     await Book.update(req.params.id, {
-      title, author, isbn, category, description, publisher,
+      title, author, isbn, category_id: finalCategoryId, description, publisher,
       publication_year: publication_year || null,
       cover_url, location,
       library_only: library_only === 'on',
@@ -180,6 +202,9 @@ exports.removeCopies = async (req, res) => {
 // Carga masiva vía CSV
 // Columnas esperadas: title,author,isbn,category,description,
 // publisher,publication_year,total_copies,location
+// La columna "category" es texto libre en el CSV; se busca (sin
+// distinguir mayúsculas) o se crea automáticamente en la tabla
+// categories, evitando duplicados con las categorías existentes.
 // ------------------------------------------------------------
 exports.showImportForm = (req, res) => {
   res.render('admin/import-csv', {
@@ -210,11 +235,12 @@ exports.importCsv = async (req, res) => {
             continue;
           }
           const total = parseInt(row.total_copies, 10) || 1;
+          const category_id = await Category.findOrCreate(row.category);
           await Book.create({
             title: row.title,
             author: row.author,
             isbn: row.isbn,
-            category: row.category,
+            category_id,
             description: row.description || '',
             publisher: row.publisher || '',
             publication_year: row.publication_year || null,
