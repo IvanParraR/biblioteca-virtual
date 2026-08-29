@@ -1,4 +1,5 @@
 const Admin = require('../models/Admin');
+const LoginLockout = require('../models/LoginLockout');
 
 const SCHOOL_NAME = () => process.env.SCHOOL_NAME || 'Biblioteca Escolar';
 
@@ -48,6 +49,7 @@ exports.submitUsername = async (req, res) => {
 // Paso 2: verificar la respuesta a la pregunta de seguridad
 exports.submitAnswer = async (req, res) => {
   const { username, answer, question } = req.body;
+  const lockoutId = `secquestion:${(username || '').trim().toLowerCase()}`;
 
   if (!req.session.pwRecoveryUsername || req.session.pwRecoveryUsername !== username) {
     req.flash('error', 'Tu sesión de recuperación expiró. Empieza de nuevo.');
@@ -55,17 +57,33 @@ exports.submitAnswer = async (req, res) => {
   }
 
   try {
-    const admin = await Admin.verifySecurityAnswer(username, answer);
-    if (!admin) {
+    const lockStatus = await LoginLockout.check(lockoutId);
+    if (lockStatus.locked) {
       return res.render('admin/forgot-password-question', {
         pageTitle: 'Pregunta de seguridad',
         schoolName: SCHOOL_NAME(),
         username,
         question,
-        formErrorMsg: 'La respuesta no es correcta. Si no la recuerdas, pide a un administrador con permiso de gestión que te asigne una contraseña temporal desde el panel.',
+        formErrorMsg: `Demasiados intentos fallidos. Intenta de nuevo en ${lockStatus.minutesLeft} minuto${lockStatus.minutesLeft === 1 ? '' : 's'}, o pide a un administrador con permiso de gestión que te asigne una contraseña temporal.`,
       });
     }
 
+    const admin = await Admin.verifySecurityAnswer(username, answer);
+    if (!admin) {
+      const result = await LoginLockout.recordFailure(lockoutId);
+      const msg = result.lockedNow
+        ? `Demasiados intentos fallidos. Esta verificación quedó bloqueada por ${LoginLockout.LOCK_DURATION_MINUTES} minutos.`
+        : `La respuesta no es correcta. Te quedan ${result.attemptsLeft} intento${result.attemptsLeft === 1 ? '' : 's'}. Si no la recuerdas, pide a un administrador con permiso de gestión que te asigne una contraseña temporal.`;
+      return res.render('admin/forgot-password-question', {
+        pageTitle: 'Pregunta de seguridad',
+        schoolName: SCHOOL_NAME(),
+        username,
+        question,
+        formErrorMsg: msg,
+      });
+    }
+
+    await LoginLockout.recordSuccess(lockoutId);
     req.session.pwRecoveryVerifiedAt = Date.now();
     res.render('admin/forgot-password-reset', {
       pageTitle: 'Nueva contraseña',

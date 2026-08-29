@@ -77,6 +77,21 @@ CREATE TABLE IF NOT EXISTS admins (
 -- models/Book.js — para que nunca quede desincronizado.
 
 -- ---------------------------------------------------------
+-- Tabla: login_lockouts
+-- Protección contra fuerza bruta: registra intentos fallidos por
+-- identificador (ej. "login:admin" o "secquestion:admin") y
+-- bloquea temporalmente tras varios intentos seguidos.
+-- ---------------------------------------------------------
+CREATE TABLE IF NOT EXISTS login_lockouts (
+  id              INT AUTO_INCREMENT PRIMARY KEY,
+  identifier      VARCHAR(150) NOT NULL UNIQUE,
+  failed_count    INT NOT NULL DEFAULT 0,
+  locked_until    DATETIME NULL,
+  last_attempt_at DATETIME NULL,
+  updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- ---------------------------------------------------------
 -- Tabla: activity_log
 -- Registro de auditoría: qué administrador hizo qué, cuándo, y
 -- sobre qué (libro, categoría, cuenta de administrador). Se

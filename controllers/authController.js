@@ -1,29 +1,46 @@
 const bcrypt = require('bcryptjs');
 const { pool } = require('../config/db');
+const LoginLockout = require('../models/LoginLockout');
+
+const SCHOOL_NAME = () => process.env.SCHOOL_NAME || 'Biblioteca Escolar';
 
 exports.showLogin = (req, res) => {
   res.render('admin/login', {
     pageTitle: 'Acceso administrador',
-    schoolName: process.env.SCHOOL_NAME || 'Biblioteca Escolar',
+    schoolName: SCHOOL_NAME(),
   });
 };
 
 exports.login = async (req, res) => {
   const { username, password } = req.body;
+  // Un identificador por nombre de usuario intentado (incluso si no
+  // existe) — evita que alguien distinga "usuario inválido" de
+  // "contraseña inválida" a partir del comportamiento del bloqueo.
+  const lockoutId = `login:${(username || '').trim().toLowerCase()}`;
+
   try {
+    const lockStatus = await LoginLockout.check(lockoutId);
+    if (lockStatus.locked) {
+      req.flash('error', `Demasiados intentos fallidos. Intenta de nuevo en ${lockStatus.minutesLeft} minuto${lockStatus.minutesLeft === 1 ? '' : 's'}.`);
+      return res.redirect('/admin/login');
+    }
+
     const [rows] = await pool.query('SELECT * FROM admins WHERE username = ?', [username]);
     const admin = rows[0];
 
-    if (!admin) {
-      req.flash('error', 'Usuario o contraseña incorrectos.');
+    const valid = admin ? await bcrypt.compare(password, admin.password_hash) : false;
+
+    if (!valid) {
+      const result = await LoginLockout.recordFailure(lockoutId);
+      if (result.lockedNow) {
+        req.flash('error', `Demasiados intentos fallidos. Tu acceso quedó bloqueado por ${LoginLockout.LOCK_DURATION_MINUTES} minutos.`);
+      } else {
+        req.flash('error', `Usuario o contraseña incorrectos. Te quedan ${result.attemptsLeft} intento${result.attemptsLeft === 1 ? '' : 's'} antes de un bloqueo temporal.`);
+      }
       return res.redirect('/admin/login');
     }
 
-    const valid = await bcrypt.compare(password, admin.password_hash);
-    if (!valid) {
-      req.flash('error', 'Usuario o contraseña incorrectos.');
-      return res.redirect('/admin/login');
-    }
+    await LoginLockout.recordSuccess(lockoutId);
 
     req.session.admin = {
       id: admin.id,

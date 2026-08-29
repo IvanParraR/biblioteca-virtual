@@ -242,7 +242,30 @@ Get-Content database/migrate_activity_log.sql | & "C:\Program Files\MySQL\MySQL 
 
 El historial empieza vacío desde el momento en que se aplica la migración — no reconstruye actividad pasada, ya que esa información no existía antes.
 
-## 10. Importación masiva por CSV
+## 10. Protección contra fuerza bruta
+
+El login de administrador y la verificación de la pregunta de seguridad (paso 2 de "olvidé mi contraseña") se bloquean temporalmente tras **5 intentos fallidos seguidos**, por **15 minutos**. Mientras dura el bloqueo, ni siquiera la contraseña o respuesta correcta funciona — hay que esperar a que pase el tiempo.
+
+Detalles de la implementación:
+- El login y la pregunta de seguridad tienen contadores **independientes**: agotar los intentos en uno no bloquea el otro.
+- El identificador de bloqueo es el nombre de usuario escrito (exista o no la cuenta), para que no se pueda distinguir "usuario inválido" de "contraseña inválida" observando el comportamiento del bloqueo.
+- Un intento **exitoso** borra por completo el historial de fallos de ese identificador.
+- Pasados los 15 minutos, el siguiente intento reinicia el contador desde cero automáticamente.
+- El mensaje de error muestra cuántos intentos quedan antes del bloqueo, y cuántos minutos faltan mientras está bloqueado.
+
+**Si ya tenías el proyecto instalado antes de esta función**, ejecuta la migración:
+
+```bash
+mysql -u root -p biblioteca_virtual < database/migrate_login_lockouts.sql
+```
+
+En PowerShell (Windows):
+
+```powershell
+Get-Content database/migrate_login_lockouts.sql | & "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -u root -p biblioteca_virtual
+```
+
+## 11. Importación masiva por CSV
 
 Desde **Panel de administración → Importar CSV**, se puede subir un archivo `.csv` con esta estructura:
 
@@ -253,7 +276,7 @@ El Quijote,Miguel de Cervantes,9788420412146,Literatura,Novela clásica español
 
 Campos obligatorios: `title`, `author`, `isbn`, `category`. Los demás son opcionales.
 
-## 11. Próximos pasos sugeridos
+## 12. Próximos pasos sugeridos
 
 - Implementar el flujo completo de préstamos (solicitud, devolución, historial).
 - Agregar recuperación de contraseña para administradores.
