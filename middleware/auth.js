@@ -31,4 +31,15 @@ function requireAdminManager(req, res, next) {
   return res.redirect('/admin/dashboard');
 }
 
-module.exports = { requireAdmin, redirectIfLoggedIn, requireAdminManager };
+// Obliga a cambiar la contraseña antes de usar cualquier otra
+// sección del panel, cuando un gestor le asignó una temporal.
+function checkForcedPasswordChange(req, res, next) {
+  const admin = req.session && req.session.admin;
+  if (admin && admin.must_change_password && !req.path.startsWith('/account')) {
+    req.flash('error', 'Debes definir una nueva contraseña antes de continuar (la actual es temporal).');
+    return res.redirect('/admin/account');
+  }
+  next();
+}
+
+module.exports = { requireAdmin, redirectIfLoggedIn, requireAdminManager, checkForcedPasswordChange };

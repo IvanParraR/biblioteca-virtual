@@ -8,6 +8,7 @@
       </span>
     </a>
     <nav class="desktop-nav" aria-label="Navegación de administración">
+      <a href="/admin/account" class="<%= currentPath === '/admin/account' ? 'active' : '' %>">Mi cuenta</a>
       <span style="color: var(--gold-500); font-size: 0.86rem; margin-right: 8px;"><%= admin ? admin.full_name || admin.username : '' %></span>
       <form action="/admin/logout" method="POST" style="margin:0;">
         <button type="submit" class="header-cta" style="border:none; cursor:pointer;">Cerrar sesión</button>

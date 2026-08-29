@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+<%- include('../partials/head') %>
+<body>
+  <%- include('../partials/nav-admin') %>
+
+  <div class="admin-page-head">
+    <div>
+      <h1 style="margin-bottom:2px;">Mi cuenta</h1>
+      <p style="color:var(--ink-600); font-size:0.9rem;">Usuario: <strong><%= admin.username %></strong></p>
+    </div>
+  </div>
+
+  <% if (forcedChange) { %>
+    <div class="alert alert-error">
+      Estás usando una contraseña temporal. Debes definir una nueva contraseña antes de continuar usando el panel.
+    </div>
+  <% } %>
+
+  <% if (successMsg && successMsg.length) { %><div class="alert alert-success"><%= successMsg[0] %></div><% } %>
+  <% if (errorMsg && errorMsg.length) { %><div class="alert alert-error"><%= errorMsg[0] %></div><% } %>
+
+  <div class="form-card" style="margin-bottom:28px;">
+    <h2 style="font-size:1.05rem; margin-bottom:16px;">Cambiar mi contraseña</h2>
+    <form action="/admin/account/password" method="POST">
+      <div class="form-grid">
+        <div class="field field-full">
+          <label for="current_password">Contraseña actual *</label>
+          <input type="password" id="current_password" name="current_password" required placeholder="<% if (forcedChange) { %>Tu contraseña temporal<% } else { %>Tu contraseña actual<% } %>">
+        </div>
+        <div class="field">
+          <label for="new_password">Nueva contraseña *</label>
+          <input type="password" id="new_password" name="new_password" required minlength="8" placeholder="Mínimo 8 caracteres">
+        </div>
+        <div class="field">
+          <label for="confirm_password">Confirmar nueva contraseña *</label>
+          <input type="password" id="confirm_password" name="confirm_password" required minlength="8">
+        </div>
+      </div>
+      <div style="margin-top:18px;">
+        <button type="submit" class="btn btn-gold">Actualizar contraseña</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="form-card">
+    <h2 style="font-size:1.05rem; margin-bottom:6px;">Pregunta de seguridad</h2>
+    <p class="field-hint" style="margin-bottom:16px;">
+      Se usa para recuperar tu contraseña por tu cuenta si la olvidas, sin depender de otro administrador.
+      <% if (account.has_security_question) { %>
+        Actualmente tienes configurada: <strong>"<%= account.security_question %>"</strong>
+      <% } else { %>
+        Todavía no tienes una configurada.
+      <% } %>
+    </p>
+    <form action="/admin/account/security-question" method="POST">
+      <div class="form-grid">
+        <div class="field field-full">
+          <label for="sq_current_password">Confirma tu contraseña actual *</label>
+          <input type="password" id="sq_current_password" name="current_password" required>
+        </div>
+        <div class="field field-full">
+          <label for="security_question">Pregunta *</label>
+          <input type="text" id="security_question" name="security_question" required placeholder="Ej. ¿Cuál es el nombre de tu primera mascota?" value="<%= account.has_security_question ? account.security_question : '' %>">
+        </div>
+        <div class="field field-full">
+          <label for="security_answer">Respuesta *</label>
+          <input type="text" id="security_answer" name="security_answer" required placeholder="Escribe una respuesta que recuerdes fácilmente">
+          <span class="field-hint">No distingue mayúsculas ni espacios extra al verificarla.</span>
+        </div>
+      </div>
+      <div style="margin-top:18px;">
+        <button type="submit" class="btn btn-outline"><%= account.has_security_question ? 'Actualizar pregunta de seguridad' : 'Guardar pregunta de seguridad' %></button>
+      </div>
+    </form>
+  </div>
+
+  <%- include('../partials/footer-admin') %>
+</body>
+</html>

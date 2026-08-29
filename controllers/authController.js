@@ -30,6 +30,7 @@ exports.login = async (req, res) => {
       username: admin.username,
       full_name: admin.full_name,
       can_manage_admins: !!admin.can_manage_admins,
+      must_change_password: !!admin.must_change_password,
     };
     res.redirect('/admin/dashboard');
   } catch (err) {

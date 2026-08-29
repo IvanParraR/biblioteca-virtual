@@ -3,10 +3,19 @@ const router = express.Router();
 const adminController = require('../controllers/adminController');
 const adminManagementController = require('../controllers/adminManagementController');
 const categoryController = require('../controllers/categoryController');
-const { requireAdmin, requireAdminManager } = require('../middleware/auth');
+const accountController = require('../controllers/accountController');
+const { requireAdmin, requireAdminManager, checkForcedPasswordChange } = require('../middleware/auth');
 const { coverUpload, csvUpload } = require('../middleware/upload');
 
 router.use(requireAdmin);
+
+// "Mi cuenta" queda ANTES del bloqueo por contraseña forzada, para que
+// el admin siempre pueda llegar ahí a cambiar su contraseña temporal.
+router.get('/account', accountController.show);
+router.post('/account/password', accountController.changePassword);
+router.post('/account/security-question', accountController.updateSecurityQuestion);
+
+router.use(checkForcedPasswordChange);
 
 router.get('/dashboard', adminController.dashboard);
 
@@ -35,6 +44,7 @@ router.post('/categories/:id/delete', categoryController.delete);
 router.get('/admins', requireAdminManager, adminManagementController.list);
 router.post('/admins', requireAdminManager, adminManagementController.create);
 router.post('/admins/:id/toggle-permission', requireAdminManager, adminManagementController.togglePermission);
+router.post('/admins/:id/reset-temp-password', requireAdminManager, adminManagementController.assignTemporaryPassword);
 router.post('/admins/:id/delete', requireAdminManager, adminManagementController.deleteAdmin);
 
 module.exports = router;

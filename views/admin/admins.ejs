@@ -17,7 +17,7 @@
   <div class="table-wrap" style="margin-bottom:32px;">
     <table class="admin-table">
       <thead>
-        <tr><th>Usuario</th><th>Nombre</th><th>Puede gestionar admins</th><th>Creado</th><th>Acciones</th></tr>
+        <tr><th>Usuario</th><th>Nombre</th><th>Puede gestionar admins</th><th>Pregunta de seguridad</th><th>Creado</th><th>Acciones</th></tr>
       </thead>
       <tbody>
         <% admins.forEach(a => { %>
@@ -29,6 +29,11 @@
                 <%= a.can_manage_admins ? 'Sí, puede gestionar' : 'No' %>
               </span>
             </td>
+            <td data-label="Pregunta de seguridad">
+              <span class="badge <%= a.has_security_question ? 'badge-disponible' : 'badge-prestado' %>">
+                <%= a.has_security_question ? 'Configurada' : 'Sin configurar' %>
+              </span>
+            </td>
             <td data-label="Creado"><%= new Date(a.created_at).toLocaleDateString('es-ES') %></td>
             <td data-label="Acciones">
               <div class="actions-cell">
@@ -38,6 +43,10 @@
                   </button>
                 </form>
                 <% if (a.id !== admin.id) { %>
+                  <form action="/admin/admins/<%= a.id %>/reset-temp-password" method="POST" style="display:inline; margin:0;"
+                    onsubmit="return confirm('¿Asignar una contraseña temporal a &quot;<%= a.username %>&quot;? Esto reemplaza su contraseña actual de inmediato y le da acceso a quien tenga esa contraseña temporal hasta que la cambie. Compártela solo con el dueño real de la cuenta.');">
+                    <button type="submit" class="btn btn-outline btn-sm">Contraseña temporal</button>
+                  </form>
                   <button type="button" class="btn btn-danger btn-sm js-delete-trigger" data-title="<%= a.username %>" data-action="/admin/admins/<%= a.id %>/delete">Eliminar</button>
                 <% } %>
               </div>

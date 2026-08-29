@@ -80,6 +80,37 @@ exports.togglePermission = async (req, res) => {
   }
 };
 
+// Reseteo asistido: genera una contraseña temporal para otra cuenta.
+// Es una acción sensible (el gestor obtiene acceso total a esa cuenta
+// hasta que la persona cambie la contraseña), por eso se pide
+// confirmación explícita en el formulario antes de llegar aquí, y no
+// se permite usarla sobre la propia cuenta del gestor (para eso existe
+// "Mi cuenta" → cambiar contraseña).
+exports.assignTemporaryPassword = async (req, res) => {
+  try {
+    const targetId = parseInt(req.params.id, 10);
+
+    if (targetId === req.session.admin.id) {
+      req.flash('error', 'No puedes asignarte una contraseña temporal a ti mismo. Usa "Mi cuenta" para cambiar tu propia contraseña.');
+      return res.redirect('/admin/admins');
+    }
+
+    const target = await Admin.findById(targetId);
+    if (!target) {
+      req.flash('error', 'Cuenta no encontrada.');
+      return res.redirect('/admin/admins');
+    }
+
+    const tempPassword = await Admin.assignTemporaryPassword(targetId);
+    req.flash('success', `Contraseña temporal para "${target.username}": ${tempPassword} — compártela de forma segura. Deberá cambiarla al iniciar sesión.`);
+    res.redirect('/admin/admins');
+  } catch (err) {
+    console.error(err);
+    req.flash('error', 'No se pudo asignar la contraseña temporal.');
+    res.redirect('/admin/admins');
+  }
+};
+
 exports.deleteAdmin = async (req, res) => {
   try {
     const targetId = parseInt(req.params.id, 10);

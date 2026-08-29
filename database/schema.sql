@@ -60,12 +60,15 @@ CREATE TABLE IF NOT EXISTS books (
 -- requieren cuenta según los requisitos del prototipo)
 -- ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS admins (
-  id                  INT AUTO_INCREMENT PRIMARY KEY,
-  username            VARCHAR(100) NOT NULL UNIQUE,
-  password_hash       VARCHAR(255) NOT NULL,
-  full_name           VARCHAR(150),
-  can_manage_admins   TINYINT(1) NOT NULL DEFAULT 0,
-  created_at          DATETIME DEFAULT CURRENT_TIMESTAMP
+  id                    INT AUTO_INCREMENT PRIMARY KEY,
+  username              VARCHAR(100) NOT NULL UNIQUE,
+  password_hash         VARCHAR(255) NOT NULL,
+  full_name             VARCHAR(150),
+  can_manage_admins     TINYINT(1) NOT NULL DEFAULT 0,
+  security_question     VARCHAR(255) DEFAULT NULL,
+  security_answer_hash  VARCHAR(255) DEFAULT NULL,
+  must_change_password  TINYINT(1) NOT NULL DEFAULT 0,
+  created_at            DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
 -- Nota: el estado de un libro (Disponible / Prestado / Solo en
@@ -77,9 +80,11 @@ CREATE TABLE IF NOT EXISTS admins (
 -- Admin por defecto → usuario: admin / contraseña: biblioteca123
 -- Este es el ÚNICO admin con permiso para gestionar otras
 -- cuentas de administrador desde el inicio (can_manage_admins = 1).
+-- Pregunta de seguridad de ejemplo (para probar la recuperación
+-- de contraseña): "¿De qué color es el tema de la biblioteca?" → verde
 -- ---------------------------------------------------------
-INSERT INTO admins (username, password_hash, full_name, can_manage_admins) VALUES
-('admin', '$2a$10$pSl5YAcRdw2NzKnTfzemTeQ4.7u/mjs1Uan17UdGQhv1HZzbsKFIq', 'Administrador de Biblioteca', 1)
+INSERT INTO admins (username, password_hash, full_name, can_manage_admins, security_question, security_answer_hash) VALUES
+('admin', '$2a$10$pSl5YAcRdw2NzKnTfzemTeQ4.7u/mjs1Uan17UdGQhv1HZzbsKFIq', 'Administrador de Biblioteca', 1, '¿De qué color es el tema de esta biblioteca virtual?', '$2a$10$trdgKEW0W1.fRXhlz/qVa.2WdMUk9HyU9GVW2jECKIJiircZjChQO')
 ON DUPLICATE KEY UPDATE username = username;
 
 -- ---------------------------------------------------------

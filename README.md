@@ -155,6 +155,28 @@ Get-Content database/migrate_admin_permissions.sql | & "C:\Program Files\MySQL\M
 
 Esto agrega la columna `can_manage_admins` y se la otorga automáticamente a la cuenta de administrador más antigua.
 
+### Recuperación de contraseña (dos niveles)
+
+**Nivel 1 — Autoservicio con pregunta de seguridad.** Cada admin configura su propia pregunta desde **Mi cuenta** (requiere confirmar su contraseña actual). Si la olvida, desde el login hace clic en "¿Olvidaste tu contraseña?", responde la pregunta y define una nueva — sin ayuda de nadie más. La cuenta semilla ya trae una de ejemplo: *"¿De qué color es el tema de esta biblioteca virtual?"* → `verde`.
+
+**Nivel 2 — Reseteo asistido por un gestor.** Si el admin no recuerda su respuesta, una cuenta con permiso de gestión puede asignarle una **contraseña temporal** desde Panel de administración → Administradores (con un mensaje de confirmación antes de ejecutarlo, ya que es una acción sensible). Esa cuenta queda bloqueada de todo el panel — solo puede entrar a "Mi cuenta" — hasta que defina una contraseña nueva usando la temporal como contraseña actual.
+
+**Cambio de contraseña propia.** Cualquier admin puede cambiar su propia contraseña en cualquier momento desde **Mi cuenta**, con el formato contraseña actual + nueva + confirmación.
+
+**Si ya tenías el proyecto instalado antes de esta función**, ejecuta la migración:
+
+```bash
+mysql -u root -p biblioteca_virtual < database/migrate_password_recovery.sql
+```
+
+En PowerShell (Windows):
+
+```powershell
+Get-Content database/migrate_password_recovery.sql | & "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -u root -p biblioteca_virtual
+```
+
+Esto agrega las columnas `security_question`, `security_answer_hash` y `must_change_password` sin afectar tus cuentas ni contraseñas existentes. Cada admin deberá entrar a "Mi cuenta" para configurar su pregunta de seguridad (no viene configurada automáticamente para cuentas ya existentes).
+
 ### Migración de categorías (si ya tenías el proyecto instalado)
 
 Si tu base de datos todavía tiene la columna `books.category` como texto libre, ejecuta:
