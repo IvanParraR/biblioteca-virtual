@@ -196,6 +196,17 @@ const Book = {
     );
   },
 
+  // Establece un valor exacto de copias disponibles, respetando
+  // los límites [0, total_copies]. Usado por el "deshacer" del
+  // historial de actividad, que restaura un valor puntual anterior
+  // en vez de sumar/restar.
+  async setAvailableCopies(id, value) {
+    await pool.query(
+      'UPDATE books SET available_copies = GREATEST(0, LEAST(total_copies, ?)) WHERE id = ?',
+      [value, id]
+    );
+  },
+
   async stats() {
     const [[totals]] = await pool.query(
       `SELECT

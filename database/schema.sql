@@ -77,6 +77,37 @@ CREATE TABLE IF NOT EXISTS admins (
 -- models/Book.js — para que nunca quede desincronizado.
 
 -- ---------------------------------------------------------
+-- Tabla: activity_log
+-- Registro de auditoría: qué administrador hizo qué, cuándo, y
+-- sobre qué (libro, categoría, cuenta de administrador). Se
+-- conserva aunque se elimine la cuenta que hizo la acción
+-- (admin_id queda NULL, pero el nombre de usuario se conserva
+-- en admin_username para no perder el historial).
+-- ---------------------------------------------------------
+CREATE TABLE IF NOT EXISTS activity_log (
+  id              INT AUTO_INCREMENT PRIMARY KEY,
+  admin_id        INT NULL,
+  admin_username  VARCHAR(100) NOT NULL,
+  action_type     VARCHAR(50) NOT NULL,
+  entity_type     VARCHAR(20) NOT NULL,
+  entity_id       INT NULL,
+  entity_label    VARCHAR(255),
+  details         VARCHAR(500),
+  before_state    TEXT NULL,
+  is_undoable     TINYINT(1) NOT NULL DEFAULT 0,
+  is_revert       TINYINT(1) NOT NULL DEFAULT 0,
+  undone_at       DATETIME NULL,
+  undone_by       VARCHAR(100) NULL,
+  created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_activity_admin FOREIGN KEY (admin_id) REFERENCES admins(id) ON DELETE SET NULL,
+  INDEX idx_activity_created_at (created_at),
+  INDEX idx_activity_admin_username (admin_username),
+  INDEX idx_activity_action_type (action_type),
+  INDEX idx_activity_entity_type (entity_type),
+  INDEX idx_activity_entity (entity_type, entity_id)
+) ENGINE=InnoDB;
+
+-- ---------------------------------------------------------
 -- Admin por defecto → usuario: admin / contraseña: biblioteca123
 -- Este es el ÚNICO admin con permiso para gestionar otras
 -- cuentas de administrador desde el inicio (can_manage_admins = 1).

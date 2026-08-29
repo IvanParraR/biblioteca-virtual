@@ -1,4 +1,5 @@
 const Admin = require('../models/Admin');
+const ActivityLog = require('../models/ActivityLog');
 
 const SCHOOL_NAME = () => process.env.SCHOOL_NAME || 'Biblioteca Escolar';
 
@@ -31,11 +32,19 @@ exports.create = async (req, res) => {
       return res.redirect('/admin/admins');
     }
 
-    await Admin.create({
+    const newAdminId = await Admin.create({
       username,
       password,
       full_name,
       can_manage_admins: can_manage_admins === 'on',
+    });
+
+    await ActivityLog.log({
+      adminId: req.session.admin.id,
+      adminUsername: req.session.admin.username,
+      actionType: 'admin_created',
+      entityId: newAdminId,
+      entityLabel: username,
     });
 
     req.flash('success', `Se creó la cuenta "${username}" correctamente.`);
@@ -71,6 +80,14 @@ exports.togglePermission = async (req, res) => {
     }
 
     await Admin.setCanManage(targetId, !target.can_manage_admins);
+    await ActivityLog.log({
+      adminId: req.session.admin.id,
+      adminUsername: req.session.admin.username,
+      actionType: target.can_manage_admins ? 'admin_permission_revoked' : 'admin_permission_granted',
+      entityId: targetId,
+      entityLabel: target.username,
+      beforeState: { can_manage_admins: !!target.can_manage_admins },
+    });
     req.flash('success', `Permisos actualizados para "${target.username}".`);
     res.redirect('/admin/admins');
   } catch (err) {
@@ -102,6 +119,13 @@ exports.assignTemporaryPassword = async (req, res) => {
     }
 
     const tempPassword = await Admin.assignTemporaryPassword(targetId);
+    await ActivityLog.log({
+      adminId: req.session.admin.id,
+      adminUsername: req.session.admin.username,
+      actionType: 'admin_temp_password_assigned',
+      entityId: targetId,
+      entityLabel: target.username,
+    });
     req.flash('success', `Contraseña temporal para "${target.username}": ${tempPassword} — compártela de forma segura. Deberá cambiarla al iniciar sesión.`);
     res.redirect('/admin/admins');
   } catch (err) {
@@ -141,6 +165,13 @@ exports.deleteAdmin = async (req, res) => {
     }
 
     await Admin.delete(targetId);
+    await ActivityLog.log({
+      adminId: req.session.admin.id,
+      adminUsername: req.session.admin.username,
+      actionType: 'admin_deleted',
+      entityId: targetId,
+      entityLabel: target.username,
+    });
     req.flash('success', `Se eliminó la cuenta "${target.username}".`);
     res.redirect('/admin/admins');
   } catch (err) {

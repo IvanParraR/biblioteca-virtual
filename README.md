@@ -197,7 +197,52 @@ Esto crea la tabla `categories`, agrupa tus categorías de texto existentes (rec
 
 Todos los scripts SQL de este proyecto incluyen `SET NAMES utf8mb4;`, lo que evita que tildes y eñes se corrompan (ej. "MatemÃ¡ticas" en vez de "Matemáticas") sin importar la configuración regional de tu instalación de MySQL. Si aun así ves caracteres corruptos, verifica que tu terminal esté usando UTF-8.
 
-## 9. Importación masiva por CSV
+## 9. Historial de actividad (auditoría)
+
+Panel de administración → Actividad (visible para cualquier cuenta de admin, no solo las que tienen permiso de gestión). Registra automáticamente cada acción que modifica datos: crear/editar/eliminar libros, mover copias disponibles, importar CSV, crear/renombrar/fusionar/eliminar categorías, y todo lo relacionado con cuentas de administrador (crear, dar/quitar permisos, asignar contraseña temporal, eliminar, cambios de la propia contraseña y pregunta de seguridad).
+
+Se puede filtrar y ordenar por:
+- **Rango de tiempo**: Hoy, Última semana, Último mes, una fecha específica, o un rango personalizado (desde/hasta).
+- **Actividad**: un tipo de acción específico (ej. solo "Eliminó el libro").
+- **Administrador**: todas las acciones de una misma cuenta.
+- **Entidad afectada**: Libros, Categorías o Administradores.
+- **Orden**: por fecha o por nombre de administrador, ascendente o descendente.
+
+Los registros se conservan aunque se elimine la cuenta que hizo la acción (queda el nombre de usuario, pero se desvincula el ID).
+
+### Deshacer acciones
+
+Solo el subconjunto de acciones consideradas **seguras** se puede deshacer desde el botón "Deshacer" junto a cada fila:
+
+- Crear / editar / eliminar libro
+- Mover copias disponibles (+1 / -1)
+- Crear / renombrar / eliminar categoría
+- Dar / quitar permiso de gestión a un administrador
+
+**Quedan fuera a propósito** (por motivos de seguridad, ver la conversación de diseño): fusionar categorías, asignar contraseña temporal, y los cambios de la propia contraseña o pregunta de seguridad. Deshacer esas dejaría a alguien con credenciales viejas sin que lo sepa.
+
+Reglas de "deshacer":
+
+1. **Solo se puede deshacer la acción MÁS RECIENTE sobre una entidad.** Si alguien más editó ese libro/categoría/admin después, el botón queda deshabilitado con el motivo "Hubo cambios posteriores sobre esto" — así nunca se pisa un cambio posterior sin darte cuenta.
+2. **Autodeshacer** (15 minutos): la misma cuenta que hizo la acción puede deshacerla ella misma, sin necesitar nada más, durante los primeros 15 minutos.
+3. **Deshacer asistido** (48 horas): pasada la ventana de autodeshacer, cualquier administrador puede deshacer acciones sobre libros/categorías (ya que cualquier admin puede editarlos de por sí); para acciones sobre **cuentas de administrador**, solo alguien con permiso de gestión puede hacerlo — igual que para realizar la acción original.
+4. **Deshacer también queda registrado** como una nueva entrada en el historial (con el ícono ↩), nunca se borra la entrada original — así nunca se pierde la trazabilidad de quién hizo qué.
+
+**Si ya tenías el proyecto instalado antes de esta función**, ejecuta la migración:
+
+```bash
+mysql -u root -p biblioteca_virtual < database/migrate_activity_log.sql
+```
+
+En PowerShell (Windows):
+
+```powershell
+Get-Content database/migrate_activity_log.sql | & "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -u root -p biblioteca_virtual
+```
+
+El historial empieza vacío desde el momento en que se aplica la migración — no reconstruye actividad pasada, ya que esa información no existía antes.
+
+## 10. Importación masiva por CSV
 
 Desde **Panel de administración → Importar CSV**, se puede subir un archivo `.csv` con esta estructura:
 
@@ -208,7 +253,7 @@ El Quijote,Miguel de Cervantes,9788420412146,Literatura,Novela clásica español
 
 Campos obligatorios: `title`, `author`, `isbn`, `category`. Los demás son opcionales.
 
-## 10. Próximos pasos sugeridos
+## 11. Próximos pasos sugeridos
 
 - Implementar el flujo completo de préstamos (solicitud, devolución, historial).
 - Agregar recuperación de contraseña para administradores.

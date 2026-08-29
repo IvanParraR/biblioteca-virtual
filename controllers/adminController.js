@@ -2,6 +2,7 @@ const fs = require('fs');
 const csv = require('csv-parser');
 const Book = require('../models/Book');
 const Category = require('../models/Category');
+const ActivityLog = require('../models/ActivityLog');
 
 const SCHOOL_NAME = () => process.env.SCHOOL_NAME || 'Biblioteca Escolar';
 
@@ -84,7 +85,7 @@ exports.createBook = async (req, res) => {
       return res.redirect('/admin/books/new');
     }
 
-    await Book.create({
+    const newBookId = await Book.create({
       title,
       author,
       isbn,
@@ -97,6 +98,14 @@ exports.createBook = async (req, res) => {
       available_copies: parseInt(total_copies, 10) || 1,
       location,
       library_only: library_only === 'on',
+    });
+
+    await ActivityLog.log({
+      adminId: req.session.admin.id,
+      adminUsername: req.session.admin.username,
+      actionType: 'book_created',
+      entityId: newBookId,
+      entityLabel: title,
     });
 
     req.flash('success', `"${title}" se agregó correctamente al catálogo.`);
@@ -165,6 +174,28 @@ exports.updateBook = async (req, res) => {
       available_copies: newAvailable,
     });
 
+    await ActivityLog.log({
+      adminId: req.session.admin.id,
+      adminUsername: req.session.admin.username,
+      actionType: 'book_updated',
+      entityId: parseInt(req.params.id, 10),
+      entityLabel: title,
+      beforeState: {
+        title: existing.title,
+        author: existing.author,
+        isbn: existing.isbn,
+        category_id: existing.category_id,
+        description: existing.description,
+        publisher: existing.publisher,
+        publication_year: existing.publication_year,
+        cover_url: existing.cover_url,
+        location: existing.location,
+        library_only: existing.library_only,
+        total_copies: existing.total_copies,
+        available_copies: existing.available_copies,
+      },
+    });
+
     req.flash('success', `"${title}" se actualizó correctamente.`);
     res.redirect('/admin/books');
   } catch (err) {
@@ -178,6 +209,27 @@ exports.deleteBook = async (req, res) => {
   try {
     const book = await Book.findById(req.params.id);
     await Book.delete(req.params.id);
+    await ActivityLog.log({
+      adminId: req.session.admin.id,
+      adminUsername: req.session.admin.username,
+      actionType: 'book_deleted',
+      entityId: parseInt(req.params.id, 10),
+      entityLabel: book ? book.title : `libro #${req.params.id}`,
+      beforeState: book ? {
+        title: book.title,
+        author: book.author,
+        isbn: book.isbn,
+        category_id: book.category_id,
+        description: book.description,
+        publisher: book.publisher,
+        publication_year: book.publication_year,
+        cover_url: book.cover_url,
+        location: book.location,
+        library_only: book.library_only,
+        total_copies: book.total_copies,
+        available_copies: book.available_copies,
+      } : null,
+    });
     req.flash('success', `"${book ? book.title : 'El libro'}" se eliminó del catálogo digital.`);
   } catch (err) {
     console.error(err);
@@ -189,7 +241,17 @@ exports.deleteBook = async (req, res) => {
 exports.addCopies = async (req, res) => {
   try {
     const amount = Math.max(1, parseInt(req.body.amount, 10) || 1);
+    const book = await Book.findById(req.params.id);
     await Book.addCopies(req.params.id, amount);
+    await ActivityLog.log({
+      adminId: req.session.admin.id,
+      adminUsername: req.session.admin.username,
+      actionType: 'book_copies_added',
+      entityId: parseInt(req.params.id, 10),
+      entityLabel: book ? book.title : `libro #${req.params.id}`,
+      details: `+${amount}`,
+      beforeState: book ? { available_copies: book.available_copies } : null,
+    });
     req.flash('success', `Se agregaron ${amount} copia(s).`);
   } catch (err) {
     console.error(err);
@@ -201,7 +263,17 @@ exports.addCopies = async (req, res) => {
 exports.removeCopies = async (req, res) => {
   try {
     const amount = Math.max(1, parseInt(req.body.amount, 10) || 1);
+    const book = await Book.findById(req.params.id);
     await Book.removeCopies(req.params.id, amount);
+    await ActivityLog.log({
+      adminId: req.session.admin.id,
+      adminUsername: req.session.admin.username,
+      actionType: 'book_copies_removed',
+      entityId: parseInt(req.params.id, 10),
+      entityLabel: book ? book.title : `libro #${req.params.id}`,
+      details: `-${amount}`,
+      beforeState: book ? { available_copies: book.available_copies } : null,
+    });
     req.flash('success', `Se retiraron ${amount} copia(s).`);
   } catch (err) {
     console.error(err);
@@ -270,7 +342,16 @@ exports.importCsv = async (req, res) => {
 
       fs.unlink(req.file.path, () => {});
 
-      if (created > 0) req.flash('success', `Se importaron ${created} libro(s) correctamente.`);
+      if (created > 0) {
+        await ActivityLog.log({
+          adminId: req.session.admin.id,
+          adminUsername: req.session.admin.username,
+          actionType: 'book_csv_import',
+          entityLabel: `${created} libro(s)`,
+          details: errors.length ? `${errors.length} fila(s) con error` : null,
+        });
+        req.flash('success', `Se importaron ${created} libro(s) correctamente.`);
+      }
       if (errors.length > 0) req.flash('error', `${errors.length} fila(s) tuvieron problemas: ${errors.slice(0, 5).join(' ')}`);
       res.redirect('/admin/books');
     })

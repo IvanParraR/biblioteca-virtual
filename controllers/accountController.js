@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const Admin = require('../models/Admin');
+const ActivityLog = require('../models/ActivityLog');
 
 const SCHOOL_NAME = () => process.env.SCHOOL_NAME || 'Biblioteca Escolar';
 
@@ -48,6 +49,13 @@ exports.changePassword = async (req, res) => {
 
     await Admin.setPassword(admin.id, new_password);
     req.session.admin.must_change_password = false; // ya no aplica, refleja el cambio en la sesión activa
+    await ActivityLog.log({
+      adminId: admin.id,
+      adminUsername: admin.username,
+      actionType: 'account_password_changed',
+      entityId: admin.id,
+      entityLabel: admin.username,
+    });
     req.flash('success', 'Tu contraseña se actualizó correctamente.');
     res.redirect('/admin/dashboard');
   } catch (err) {
@@ -74,6 +82,13 @@ exports.updateSecurityQuestion = async (req, res) => {
     }
 
     await Admin.setSecurityQuestion(admin.id, security_question.trim(), security_answer);
+    await ActivityLog.log({
+      adminId: admin.id,
+      adminUsername: admin.username,
+      actionType: 'account_security_question_updated',
+      entityId: admin.id,
+      entityLabel: admin.username,
+    });
     req.flash('success', 'Tu pregunta de seguridad se guardó correctamente.');
     res.redirect('/admin/account');
   } catch (err) {

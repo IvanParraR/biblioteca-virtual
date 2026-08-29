@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+<%- include('../partials/head') %>
+<body>
+  <%- include('../partials/nav-admin') %>
+
+  <div class="admin-page-head">
+    <div>
+      <h1 style="margin-bottom:2px;">Actividad</h1>
+      <p style="color:var(--ink-600); font-size:0.9rem;"><%= total %> registro<%= total === 1 ? '' : 's' %> encontrado<%= total === 1 ? '' : 's' %>.</p>
+    </div>
+  </div>
+
+  <% if (successMsg && successMsg.length) { %><div class="alert alert-success"><%= successMsg[0] %></div><% } %>
+  <% if (errorMsg && errorMsg.length) { %><div class="alert alert-error"><%= errorMsg[0] %></div><% } %>
+
+  <!-- Atajos rápidos de rango de tiempo -->
+  <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;">
+    <% const baseQs = (extra) => { const p = new URLSearchParams({ ...filters, ...extra }); return p.toString(); }; %>
+    <a href="/admin/activity-log?<%= baseQs({ timeRange: '' }) %>" class="btn btn-sm <%= filters.timeRange === '' ? 'btn-primary' : 'btn-outline' %>">Todo</a>
+    <a href="/admin/activity-log?<%= baseQs({ timeRange: 'today' }) %>" class="btn btn-sm <%= filters.timeRange === 'today' ? 'btn-primary' : 'btn-outline' %>">Hoy</a>
+    <a href="/admin/activity-log?<%= baseQs({ timeRange: 'week' }) %>" class="btn btn-sm <%= filters.timeRange === 'week' ? 'btn-primary' : 'btn-outline' %>">Última semana</a>
+    <a href="/admin/activity-log?<%= baseQs({ timeRange: 'month' }) %>" class="btn btn-sm <%= filters.timeRange === 'month' ? 'btn-primary' : 'btn-outline' %>">Último mes</a>
+    <a href="/admin/activity-log?<%= baseQs({ timeRange: 'specific' }) %>" class="btn btn-sm <%= filters.timeRange === 'specific' ? 'btn-primary' : 'btn-outline' %>">Fecha específica</a>
+    <a href="/admin/activity-log?<%= baseQs({ timeRange: 'custom' }) %>" class="btn btn-sm <%= filters.timeRange === 'custom' ? 'btn-primary' : 'btn-outline' %>">Rango personalizado</a>
+  </div>
+
+  <form action="/admin/activity-log" method="GET" class="filter-bar">
+    <input type="hidden" name="timeRange" value="<%= filters.timeRange %>">
+
+    <% if (filters.timeRange === 'specific') { %>
+      <div class="field">
+        <label for="specificDate">Fecha</label>
+        <input type="date" id="specificDate" name="specificDate" value="<%= filters.specificDate %>">
+      </div>
+    <% } else if (filters.timeRange === 'custom') { %>
+      <div class="field">
+        <label for="dateFrom">Desde</label>
+        <input type="date" id="dateFrom" name="dateFrom" value="<%= filters.dateFrom %>">
+      </div>
+      <div class="field">
+        <label for="dateTo">Hasta</label>
+        <input type="date" id="dateTo" name="dateTo" value="<%= filters.dateTo %>">
+      </div>
+    <% } %>
+
+    <div class="field">
+      <label for="actionType">Actividad</label>
+      <select id="actionType" name="actionType">
+        <option value="">Todas</option>
+        <% Object.entries(actionTypes).forEach(([key, meta]) => { %>
+          <option value="<%= key %>" <%= filters.actionType === key ? 'selected' : '' %>><%= meta.label %></option>
+        <% }) %>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="adminUsername">Administrador</label>
+      <select id="adminUsername" name="adminUsername">
+        <option value="">Todos</option>
+        <% admins.forEach(u => { %>
+          <option value="<%= u %>" <%= filters.adminUsername === u ? 'selected' : '' %>><%= u %></option>
+        <% }) %>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="entityType">Entidad afectada</label>
+      <select id="entityType" name="entityType">
+        <option value="">Todas</option>
+        <% Object.entries(entityLabels).forEach(([key, label]) => { %>
+          <option value="<%= key %>" <%= filters.entityType === key ? 'selected' : '' %>><%= label %></option>
+        <% }) %>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="sort">Ordenar por</label>
+      <select id="sort" name="sort">
+        <option value="created_at" <%= filters.sort === 'created_at' ? 'selected' : '' %>>Fecha</option>
+        <option value="admin_username" <%= filters.sort === 'admin_username' ? 'selected' : '' %>>Administrador</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="order">Orden</label>
+      <select id="order" name="order">
+        <option value="desc" <%= filters.order === 'desc' ? 'selected' : '' %>>Descendente</option>
+        <option value="asc" <%= filters.order === 'asc' ? 'selected' : '' %>>Ascendente</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <button type="submit" class="btn btn-primary btn-block">Aplicar filtros</button>
+    </div>
+  </form>
+
+  <% if (entries.length > 0) { %>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr><th>Fecha y hora</th><th>Administrador</th><th>Entidad</th><th>Acción</th><th>Deshacer</th></tr>
+        </thead>
+        <tbody>
+          <% entries.forEach(e => { %>
+            <tr>
+              <td data-label="Fecha y hora" style="font-family:var(--font-mono); font-size:0.8rem; white-space:nowrap;">
+                <%= new Date(e.created_at).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) %>
+              </td>
+              <td data-label="Administrador"><strong><%= e.admin_username %></strong></td>
+              <td data-label="Entidad"><span class="badge badge-solo_biblioteca"><%= e.entity_type_label %></span></td>
+              <td data-label="Acción">
+                <% if (e.is_revert) { %><span title="Esto fue resultado de deshacer otra acción">↩ </span><% } %>
+                <%= e.action_label %><% if (e.entity_label) { %> "<%= e.entity_label %>"<% } %><% if (e.details) { %> <span style="color:var(--ink-400);">(<%= e.details %>)</span><% } %>
+                <% if (e.undone_at) { %><br><span class="badge badge-no_disponible" style="margin-top:4px;">Deshecho por <%= e.undone_by %></span><% } %>
+              </td>
+              <td data-label="Deshacer">
+                <% if (e.canUndo) { %>
+                  <form action="/admin/activity-log/<%= e.id %>/undo" method="POST" style="margin:0;"
+                    onsubmit="return confirm('¿Deshacer esta acción? <%= e.action_label %> \'<%= (e.entity_label || '').replace(/'/g, '') %>\'. Esto se registrará en el historial.');">
+                    <button type="submit" class="btn btn-outline btn-sm">Deshacer<%= e.undoMode === 'self' ? '' : ' (asistido)' %></button>
+                  </form>
+                <% } else if (e.is_undoable && !e.undone_at) { %>
+                  <span style="font-size:0.76rem; color:var(--ink-400);" title="<%= e.undoBlockedReason %>">No disponible</span>
+                <% } else { %>
+                  <span style="color:var(--ink-400); font-size:0.8rem;">—</span>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+    <% if (totalPages > 1) { %>
+      <nav class="pagination" aria-label="Paginación">
+        <% for (let p = 1; p <= totalPages; p++) { %>
+          <% const qs = new URLSearchParams({ ...filters, page: p }).toString(); %>
+          <% if (p === currentPage) { %><span class="current"><%= p %></span>
+          <% } else { %><a href="/admin/activity-log?<%= qs %>"><%= p %></a><% } %>
+        <% } %>
+      </nav>
+    <% } %>
+  <% } else { %>
+    <div class="empty-state">
+      <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
+      <h3>No hay actividad con esos filtros</h3>
+      <p>Ajusta el rango de fechas o quita algunos filtros para ver más resultados.</p>
+      <div style="margin-top:18px;"><a href="/admin/activity-log" class="btn btn-outline">Limpiar filtros</a></div>
+    </div>
+  <% } %>
+
+  <%- include('../partials/footer-admin') %>
+</body>
+</html>

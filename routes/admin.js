@@ -4,6 +4,7 @@ const adminController = require('../controllers/adminController');
 const adminManagementController = require('../controllers/adminManagementController');
 const categoryController = require('../controllers/categoryController');
 const accountController = require('../controllers/accountController');
+const activityLogController = require('../controllers/activityLogController');
 const { requireAdmin, requireAdminManager, checkForcedPasswordChange } = require('../middleware/auth');
 const { coverUpload, csvUpload } = require('../middleware/upload');
 
@@ -46,5 +47,9 @@ router.post('/admins', requireAdminManager, adminManagementController.create);
 router.post('/admins/:id/toggle-permission', requireAdminManager, adminManagementController.togglePermission);
 router.post('/admins/:id/reset-temp-password', requireAdminManager, adminManagementController.assignTemporaryPassword);
 router.post('/admins/:id/delete', requireAdminManager, adminManagementController.deleteAdmin);
+
+// Historial de actividad — visible para cualquier administrador
+router.get('/activity-log', activityLogController.list);
+router.post('/activity-log/:id/undo', activityLogController.undo);
 
 module.exports = router;
