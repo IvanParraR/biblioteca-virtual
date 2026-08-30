@@ -97,6 +97,12 @@ const Book = {
     return attachStatus(rows[0]);
   },
 
+  async findByIds(ids) {
+    if (!ids || ids.length === 0) return [];
+    const [rows] = await pool.query(`${SELECT_BASE} WHERE b.id IN (?) ORDER BY b.title ASC`, [ids]);
+    return rows.map(attachStatus);
+  },
+
   async findByIsbn(isbn) {
     const [rows] = await pool.query(`${SELECT_BASE} WHERE b.isbn = ?`, [isbn]);
     return attachStatus(rows[0]);
@@ -182,6 +188,21 @@ const Book = {
 
   async delete(id) {
     await pool.query('DELETE FROM books WHERE id = ?', [id]);
+  },
+
+  // Elimina varios libros de una sola vez (selección múltiple en la
+  // tabla de administración). Devuelve cuántas filas se afectaron.
+  async deleteMany(ids) {
+    if (!ids || ids.length === 0) return 0;
+    const [result] = await pool.query('DELETE FROM books WHERE id IN (?)', [ids]);
+    return result.affectedRows;
+  },
+
+  // Cambia la categoría de varios libros a la vez.
+  async bulkSetCategory(ids, categoryId) {
+    if (!ids || ids.length === 0) return 0;
+    const [result] = await pool.query('UPDATE books SET category_id = ? WHERE id IN (?)', [categoryId, ids]);
+    return result.affectedRows;
   },
 
   async addCopies(id, amount) {

@@ -7,7 +7,7 @@ const accountController = require('../controllers/accountController');
 const activityLogController = require('../controllers/activityLogController');
 const exportController = require('../controllers/exportController');
 const { requireAdmin, requireAdminManager, checkForcedPasswordChange } = require('../middleware/auth');
-const { coverUpload, csvUpload } = require('../middleware/upload');
+const { coverUpload, processCoverImage, csvUpload } = require('../middleware/upload');
 
 router.use(requireAdmin);
 
@@ -25,13 +25,16 @@ router.get('/books', adminController.listBooks);
 router.get('/books/export/excel', exportController.exportExcel);
 router.get('/books/export/pdf', exportController.exportPdf);
 router.get('/books/new', adminController.showAddForm);
-router.post('/books', coverUpload.single('cover'), adminController.createBook);
+router.post('/books', coverUpload.single('cover'), processCoverImage, adminController.createBook);
 
 router.get('/books/import', adminController.showImportForm);
 router.post('/books/import', csvUpload.single('csvFile'), adminController.importCsv);
 
+router.post('/books/bulk-delete', adminController.bulkDelete);
+router.post('/books/bulk-category', adminController.bulkChangeCategory);
+
 router.get('/books/:id/edit', adminController.showEditForm);
-router.post('/books/:id', coverUpload.single('cover'), adminController.updateBook);
+router.post('/books/:id', coverUpload.single('cover'), processCoverImage, adminController.updateBook);
 router.post('/books/:id/delete', adminController.deleteBook);
 router.post('/books/:id/add-copies', adminController.addCopies);
 router.post('/books/:id/remove-copies', adminController.removeCopies);

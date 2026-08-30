@@ -265,7 +265,26 @@ En PowerShell (Windows):
 Get-Content database/migrate_login_lockouts.sql | & "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -u root -p biblioteca_virtual
 ```
 
-## 11. Exportar el catálogo (Excel / PDF)
+## 11. Acciones masivas en la tabla de libros
+
+En **Panel de administración → Libros**, cada fila tiene un checkbox de selección (y uno en el encabezado para "seleccionar todos"). Al marcar uno o más, aparece una barra con dos acciones:
+
+- **Cambiar categoría**: reasigna todos los libros seleccionados a la categoría que elijas, de una sola vez.
+- **Eliminar seleccionados**: elimina del catálogo todos los libros marcados, con una confirmación antes de ejecutarse.
+
+Ambas acciones quedan registradas en el **Historial de actividad**, con el detalle de qué libros se vieron afectados. A diferencia de las acciones sobre un solo libro, las acciones masivas **no se pueden deshacer** desde el historial — por su mayor alcance, se optó por dejarlas fuera del sistema de "deshacer" (ver la sección de historial de actividad para el detalle de qué sí se puede deshacer).
+
+## 12. Portadas optimizadas automáticamente
+
+Al subir la portada de un libro (crear o editar), la imagen se procesa automáticamente antes de guardarse:
+
+- Se redimensiona a un máximo de 500×720px, sin agrandar imágenes que ya sean más chicas.
+- Se comprime como JPEG de calidad 82 — visualmente casi idéntica al original, pero mucho más liviana.
+- Los archivos **SVG** (como las portadas de ejemplo incluidas) se guardan tal cual, ya que son vectores y no necesitan redimensionarse.
+
+Esto evita que el servidor acumule imágenes pesadas sin optimizar a medida que crece el catálogo. Requiere la librería `sharp`, que se instala automáticamente con `npm install`.
+
+## 13. Exportar el catálogo (Excel / PDF)
 
 Desde **Panel de administración → Libros**, los botones "Exportar Excel" y "Exportar PDF" descargan el catálogo completo, respetando los filtros que tengas activos en ese momento (búsqueda, categoría, disponibilidad) — si no aplicaste ningún filtro, se exporta todo.
 
@@ -274,7 +293,7 @@ Desde **Panel de administración → Libros**, los botones "Exportar Excel" y "E
 
 Cada exportación queda registrada en el **Historial de actividad**, indicando quién la generó, en qué formato, y con qué filtros.
 
-## 12. Importación masiva por CSV
+## 14. Importación masiva por CSV
 
 Desde **Panel de administración → Importar CSV**, se puede subir un archivo `.csv` con esta estructura:
 
@@ -285,7 +304,7 @@ El Quijote,Miguel de Cervantes,9788420412146,Literatura,Novela clásica español
 
 Campos obligatorios: `title`, `author`, `isbn`, `category`. Los demás son opcionales.
 
-## 13. Próximos pasos sugeridos
+## 15. Próximos pasos sugeridos
 
 - Implementar el flujo completo de préstamos (solicitud, devolución, historial).
 - Agregar recuperación de contraseña para administradores.

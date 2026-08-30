@@ -51,10 +51,23 @@
   </form>
 
   <% if (books.length > 0) { %>
+    <div class="bulk-bar" id="bulk-bar">
+      <span id="bulk-count">0 seleccionados</span>
+      <select id="bulk-category-select">
+        <option value="">Elegir categoría…</option>
+        <% categories.forEach(c => { %>
+          <option value="<%= c.id %>"><%= c.category %></option>
+        <% }) %>
+      </select>
+      <button type="button" id="bulk-apply-category" class="btn btn-outline btn-sm">Cambiar categoría</button>
+      <button type="button" id="bulk-delete-btn" class="btn btn-danger btn-sm">Eliminar seleccionados</button>
+    </div>
+
     <div class="table-wrap">
       <table class="admin-table">
         <thead>
           <tr>
+            <th style="width:36px;"><input type="checkbox" id="select-all" aria-label="Seleccionar todos"></th>
             <th>Portada</th><th>Título</th><th>Autor</th><th>ISBN</th><th>Categoría</th>
             <th>Copias</th><th>Estado</th><th>Acciones</th>
           </tr>
@@ -62,6 +75,7 @@
         <tbody>
           <% books.forEach(b => { %>
             <tr>
+              <td data-label="Seleccionar"><input type="checkbox" class="row-checkbox" value="<%= b.id %>"></td>
               <td data-label="Portada">
                 <div class="table-cover"><% if (b.cover_url) { %><img src="<%= b.cover_url %>" alt=""><% } %></div>
               </td>
@@ -93,6 +107,15 @@
         </tbody>
       </table>
     </div>
+
+    <!-- Formularios ocultos para las acciones masivas — se llenan por
+         JS con los IDs seleccionados justo antes de enviarlos. No
+         envuelven la tabla (los formularios no pueden anidarse en
+         HTML, y cada fila ya tiene sus propios formularios de +1/-1). -->
+    <form id="bulk-delete-form" action="/admin/books/bulk-delete" method="POST" style="display:none;"></form>
+    <form id="bulk-category-form" action="/admin/books/bulk-category" method="POST" style="display:none;">
+      <input type="hidden" name="category_id" id="bulk-category-hidden-input">
+    </form>
 
     <% if (totalPages > 1) { %>
       <nav class="pagination" aria-label="Paginación">

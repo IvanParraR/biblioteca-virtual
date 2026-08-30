@@ -41,6 +41,8 @@ const ACTION_TYPES = {
   account_password_changed: { label: 'Cambió su propia contraseña', entity_type: 'admin' },
   account_security_question_updated: { label: 'Actualizó su pregunta de seguridad', entity_type: 'admin' },
   catalog_exported: { label: 'Exportó el catálogo', entity_type: 'book' },
+  book_bulk_deleted: { label: 'Eliminó en lote', entity_type: 'book' },
+  book_bulk_category_changed: { label: 'Cambió la categoría en lote de', entity_type: 'book' },
 };
 
 const ENTITY_LABELS = {

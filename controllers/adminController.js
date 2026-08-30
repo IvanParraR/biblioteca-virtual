@@ -283,6 +283,88 @@ exports.removeCopies = async (req, res) => {
 };
 
 // ------------------------------------------------------------
+// Acciones masivas — seleccionar varios libros en la tabla y
+// eliminarlos o cambiarles la categoría de una sola vez. No son
+// "deshacer-ables" desde el historial de actividad (a diferencia de
+// las acciones individuales) por su mayor alcance y riesgo — sí
+// quedan registradas con el detalle de qué libros se vieron afectados.
+// ------------------------------------------------------------
+function parseIds(body) {
+  let raw = body.ids;
+  if (!raw) return [];
+  if (!Array.isArray(raw)) raw = [raw];
+  return raw.map((v) => parseInt(v, 10)).filter((n) => Number.isInteger(n) && n > 0);
+}
+
+exports.bulkDelete = async (req, res) => {
+  try {
+    const ids = parseIds(req.body);
+    if (ids.length === 0) {
+      req.flash('error', 'No seleccionaste ningún libro.');
+      return res.redirect('/admin/books');
+    }
+
+    const books = await Book.findByIds(ids);
+    const affected = await Book.deleteMany(ids);
+
+    const titles = books.slice(0, 5).map((b) => b.title).join(', ');
+    await ActivityLog.log({
+      adminId: req.session.admin.id,
+      adminUsername: req.session.admin.username,
+      actionType: 'book_bulk_deleted',
+      entityLabel: `${affected} libro(s)`,
+      details: books.length > 5 ? `${titles}, y ${books.length - 5} más` : titles,
+    });
+
+    req.flash('success', `Se eliminaron ${affected} libro(s) del catálogo.`);
+  } catch (err) {
+    console.error(err);
+    req.flash('error', 'No se pudieron eliminar los libros seleccionados.');
+  }
+  res.redirect('/admin/books');
+};
+
+exports.bulkChangeCategory = async (req, res) => {
+  try {
+    const ids = parseIds(req.body);
+    const categoryId = parseInt(req.body.category_id, 10);
+
+    if (ids.length === 0) {
+      req.flash('error', 'No seleccionaste ningún libro.');
+      return res.redirect('/admin/books');
+    }
+    if (!categoryId) {
+      req.flash('error', 'Selecciona una categoría de destino.');
+      return res.redirect('/admin/books');
+    }
+
+    const category = await Category.findById(categoryId);
+    if (!category) {
+      req.flash('error', 'Esa categoría ya no existe.');
+      return res.redirect('/admin/books');
+    }
+
+    const books = await Book.findByIds(ids);
+    const affected = await Book.bulkSetCategory(ids, categoryId);
+
+    const titles = books.slice(0, 5).map((b) => b.title).join(', ');
+    await ActivityLog.log({
+      adminId: req.session.admin.id,
+      adminUsername: req.session.admin.username,
+      actionType: 'book_bulk_category_changed',
+      entityLabel: `${affected} libro(s) → ${category.name}`,
+      details: books.length > 5 ? `${titles}, y ${books.length - 5} más` : titles,
+    });
+
+    req.flash('success', `Se cambió la categoría de ${affected} libro(s) a "${category.name}".`);
+  } catch (err) {
+    console.error(err);
+    req.flash('error', 'No se pudo cambiar la categoría de los libros seleccionados.');
+  }
+  res.redirect('/admin/books');
+};
+
+// ------------------------------------------------------------
 // Carga masiva vía CSV
 // Columnas esperadas: title,author,isbn,category,description,
 // publisher,publication_year,total_copies,location
