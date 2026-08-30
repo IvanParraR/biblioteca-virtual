@@ -5,6 +5,7 @@ const adminManagementController = require('../controllers/adminManagementControl
 const categoryController = require('../controllers/categoryController');
 const accountController = require('../controllers/accountController');
 const activityLogController = require('../controllers/activityLogController');
+const exportController = require('../controllers/exportController');
 const { requireAdmin, requireAdminManager, checkForcedPasswordChange } = require('../middleware/auth');
 const { coverUpload, csvUpload } = require('../middleware/upload');
 
@@ -21,6 +22,8 @@ router.use(checkForcedPasswordChange);
 router.get('/dashboard', adminController.dashboard);
 
 router.get('/books', adminController.listBooks);
+router.get('/books/export/excel', exportController.exportExcel);
+router.get('/books/export/pdf', exportController.exportPdf);
 router.get('/books/new', adminController.showAddForm);
 router.post('/books', coverUpload.single('cover'), adminController.createBook);
 

@@ -9,7 +9,10 @@
       <h1 style="margin-bottom:2px;">Gestionar libros</h1>
       <p style="color:var(--ink-600); font-size:0.9rem;"><%= total %> libro<%= total === 1 ? '' : 's' %> en el catálogo.</p>
     </div>
-    <div style="display:flex; gap:10px;">
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <% const exportQs = new URLSearchParams(filters).toString(); %>
+      <a href="/admin/books/export/excel?<%= exportQs %>" class="btn btn-outline" title="Exporta el catálogo con los filtros actuales">Exportar Excel</a>
+      <a href="/admin/books/export/pdf?<%= exportQs %>" class="btn btn-outline" title="Exporta el catálogo con los filtros actuales">Exportar PDF</a>
       <a href="/admin/books/import" class="btn btn-outline">Importar CSV</a>
       <a href="/admin/books/new" class="btn btn-gold">+ Agregar libro</a>
     </div>

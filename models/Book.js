@@ -124,6 +124,14 @@ const Book = {
     return rows.map(attachStatus);
   },
 
+  // Igual que search(), pero sin paginar — devuelve TODOS los
+  // resultados que cumplen los filtros. Usado por la exportación a
+  // PDF/Excel, donde se necesita el catálogo completo (filtrado o no).
+  async searchAll({ q, category, availability, author, sort = 'title', order = 'asc' } = {}) {
+    const { books } = await Book.search({ q, category, availability, author, sort, order, page: 1, perPage: Number.MAX_SAFE_INTEGER });
+    return books;
+  },
+
   async create(data) {
     const [result] = await pool.query(
       `INSERT INTO books

@@ -40,6 +40,7 @@ const ACTION_TYPES = {
   admin_temp_password_assigned: { label: 'Asignó contraseña temporal a', entity_type: 'admin' },
   account_password_changed: { label: 'Cambió su propia contraseña', entity_type: 'admin' },
   account_security_question_updated: { label: 'Actualizó su pregunta de seguridad', entity_type: 'admin' },
+  catalog_exported: { label: 'Exportó el catálogo', entity_type: 'book' },
 };
 
 const ENTITY_LABELS = {

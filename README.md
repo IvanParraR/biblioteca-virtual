@@ -265,7 +265,16 @@ En PowerShell (Windows):
 Get-Content database/migrate_login_lockouts.sql | & "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -u root -p biblioteca_virtual
 ```
 
-## 11. Importación masiva por CSV
+## 11. Exportar el catálogo (Excel / PDF)
+
+Desde **Panel de administración → Libros**, los botones "Exportar Excel" y "Exportar PDF" descargan el catálogo completo, respetando los filtros que tengas activos en ese momento (búsqueda, categoría, disponibilidad) — si no aplicaste ningún filtro, se exporta todo.
+
+- **Excel** (`.xlsx`): una hoja "Catálogo" con todas las columnas (título, autor, ISBN, categoría, editorial, año, copias, estado, ubicación), con formato profesional, filtro automático y filas alternadas para facilitar la lectura; y una hoja "Resumen" con estadísticas rápidas (total de libros, copias totales/disponibles/prestadas) — útil para inventario anual o respaldo fuera de la base de datos.
+- **PDF**: un reporte de inventario en formato horizontal, paginado automáticamente para catálogos grandes, con encabezado repetido en cada página.
+
+Cada exportación queda registrada en el **Historial de actividad**, indicando quién la generó, en qué formato, y con qué filtros.
+
+## 12. Importación masiva por CSV
 
 Desde **Panel de administración → Importar CSV**, se puede subir un archivo `.csv` con esta estructura:
 
@@ -276,7 +285,7 @@ El Quijote,Miguel de Cervantes,9788420412146,Literatura,Novela clásica español
 
 Campos obligatorios: `title`, `author`, `isbn`, `category`. Los demás son opcionales.
 
-## 12. Próximos pasos sugeridos
+## 13. Próximos pasos sugeridos
 
 - Implementar el flujo completo de préstamos (solicitud, devolución, historial).
 - Agregar recuperación de contraseña para administradores.
