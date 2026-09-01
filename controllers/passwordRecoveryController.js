@@ -1,7 +1,8 @@
+const Settings = require('../models/Settings');
 const Admin = require('../models/Admin');
 const LoginLockout = require('../models/LoginLockout');
 
-const SCHOOL_NAME = () => process.env.SCHOOL_NAME || 'Biblioteca Escolar';
+const SCHOOL_NAME = () => Settings.get().school_name;
 
 // La verificación de la respuesta se guarda en la sesión del
 // NAVEGADOR (no requiere estar logueado), con expiración corta,

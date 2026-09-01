@@ -1,6 +1,31 @@
+<%
+  const s = typeof siteSettings !== 'undefined' ? siteSettings : {};
+  const hasContact = s.address || s.city || s.phone || s.email || s.hours;
+  const hasSocial = s.social_facebook || s.social_instagram || s.social_twitter || s.social_whatsapp;
+%>
 <footer class="site-footer">
   <div class="container">
-    Biblioteca Virtual — <strong><%= schoolName || schoolNameGlobal %></strong> · Catálogo digital de consulta académica
+    <% if (hasContact || hasSocial) { %>
+      <div class="footer-contact">
+        <% if (s.address || s.city) { %>
+          <span>📍 <%= [s.address, s.city].filter(Boolean).join(', ') %></span>
+        <% } %>
+        <% if (s.phone) { %><span>📞 <%= s.phone %></span><% } %>
+        <% if (s.email) { %><span>✉️ <a href="mailto:<%= s.email %>"><%= s.email %></a></span><% } %>
+        <% if (s.hours) { %><span>🕒 <%= s.hours %></span><% } %>
+      </div>
+      <% if (hasSocial) { %>
+        <div class="footer-social">
+          <% if (s.social_facebook) { %><a href="<%= s.social_facebook %>" target="_blank" rel="noopener noreferrer">Facebook</a><% } %>
+          <% if (s.social_instagram) { %><a href="<%= s.social_instagram %>" target="_blank" rel="noopener noreferrer">Instagram</a><% } %>
+          <% if (s.social_twitter) { %><a href="<%= s.social_twitter %>" target="_blank" rel="noopener noreferrer">X / Twitter</a><% } %>
+          <% if (s.social_whatsapp) { %><a href="<%= s.social_whatsapp %>" target="_blank" rel="noopener noreferrer">WhatsApp</a><% } %>
+        </div>
+      <% } %>
+    <% } %>
+    <div class="footer-tagline <%= (hasContact || hasSocial) ? 'with-divider' : '' %>">
+      <%= libraryNameGlobal %> — <strong><%= schoolName || schoolNameGlobal %></strong> · Catálogo digital de consulta académica
+    </div>
   </div>
 </footer>
 <script src="/js/main.js"></script>

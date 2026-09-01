@@ -1,8 +1,9 @@
+const Settings = require('../models/Settings');
 const bcrypt = require('bcryptjs');
 const Admin = require('../models/Admin');
 const ActivityLog = require('../models/ActivityLog');
 
-const SCHOOL_NAME = () => process.env.SCHOOL_NAME || 'Biblioteca Escolar';
+const SCHOOL_NAME = () => Settings.get().school_name;
 
 exports.show = async (req, res) => {
   try {

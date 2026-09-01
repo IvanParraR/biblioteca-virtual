@@ -105,4 +105,12 @@ document.addEventListener('DOMContentLoaded', () => {
       submitWithIds(document.getElementById('bulk-category-form'), ids);
     });
   }
+
+  // Resalta visualmente la paleta de color seleccionada (Información general).
+  document.querySelectorAll('.palette-option input[type="radio"]').forEach((radio) => {
+    radio.addEventListener('change', () => {
+      document.querySelectorAll('.palette-option').forEach((el) => el.classList.remove('selected'));
+      radio.closest('.palette-option').classList.add('selected');
+    });
+  });
 });

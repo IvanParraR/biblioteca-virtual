@@ -43,12 +43,14 @@ const ACTION_TYPES = {
   catalog_exported: { label: 'Exportó el catálogo', entity_type: 'book' },
   book_bulk_deleted: { label: 'Eliminó en lote', entity_type: 'book' },
   book_bulk_category_changed: { label: 'Cambió la categoría en lote de', entity_type: 'book' },
+  site_settings_updated: { label: 'Actualizó la configuración del sitio', entity_type: 'settings' },
 };
 
 const ENTITY_LABELS = {
   book: 'Libro',
   category: 'Categoría',
   admin: 'Administrador',
+  settings: 'Configuración',
 };
 
 // Únicamente estas acciones son "seguras" de deshacer: cambian un
@@ -60,6 +62,7 @@ const UNDOABLE_ACTIONS = new Set([
   'category_created', 'category_renamed', 'category_deleted',
   'admin_permission_granted', 'admin_permission_revoked',
   'book_copies_added', 'book_copies_removed',
+  'site_settings_updated',
 ]);
 
 // Al deshacer una acción, el nuevo registro que se crea debe
@@ -76,6 +79,7 @@ const REVERT_ACTION_MAP = {
   admin_permission_revoked: 'admin_permission_granted',
   book_copies_added: 'book_copies_removed',
   book_copies_removed: 'book_copies_added',
+  site_settings_updated: 'site_settings_updated',
 };
 
 const ActivityLog = {

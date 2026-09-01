@@ -6,6 +6,8 @@ const methodOverride = require('method-override');
 const path = require('path');
 
 const { testConnection } = require('./config/db');
+const Settings = require('./models/Settings');
+const Palettes = require('./models/Palettes');
 const studentRoutes = require('./routes/student');
 const adminRoutes = require('./routes/admin');
 const authRoutes = require('./routes/auth');
@@ -32,12 +34,25 @@ app.use(
 );
 app.use(flash());
 
-// Variables disponibles en todas las vistas
+// Variables disponibles en todas las vistas. El nombre del colegio y
+// de la biblioteca virtual salen de la caché en memoria de Settings
+// (cargada al iniciar el servidor y actualizada cuando un gestor
+// guarda cambios desde Panel de administración → Configuración) —
+// así cualquier vista los muestra al instante y siempre al día,
+// sin necesitar una consulta a la base de datos por cada request.
 app.use((req, res, next) => {
   res.locals.successMsg = req.flash('success');
   res.locals.errorMsg = req.flash('error');
   res.locals.currentPath = req.path;
-  res.locals.schoolNameGlobal = process.env.SCHOOL_NAME || 'Biblioteca Escolar';
+  const settings = Settings.get();
+  res.locals.schoolNameGlobal = settings.school_name;
+  res.locals.libraryNameGlobal = settings.library_name;
+  // Objeto completo (logo, bienvenida, contacto, mantenimiento) para
+  // que cualquier vista lo use sin que cada controlador tenga que
+  // pasarlo a mano — y el CSS de la paleta elegida, listo para
+  // insertarse tal cual en <head>.
+  res.locals.siteSettings = settings;
+  res.locals.paletteCSSOverride = Palettes.cssFor(settings.color_palette);
   next();
 });
 
@@ -50,7 +65,7 @@ app.use('/', studentRoutes);
 app.use((req, res) => {
   res.status(404).render('errors/404', {
     pageTitle: 'Página no encontrada',
-    schoolName: process.env.SCHOOL_NAME || 'Biblioteca Escolar',
+    schoolName: Settings.get().school_name,
   });
 });
 
@@ -62,7 +77,8 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`📚 Biblioteca Virtual corriendo en http://localhost:${PORT}`);
-  testConnection();
+  await testConnection();
+  await Settings.load();
 });

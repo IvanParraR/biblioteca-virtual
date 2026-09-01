@@ -2,8 +2,9 @@ const ActivityLog = require('../models/ActivityLog');
 const Book = require('../models/Book');
 const Category = require('../models/Category');
 const Admin = require('../models/Admin');
+const Settings = require('../models/Settings');
 
-const SCHOOL_NAME = () => process.env.SCHOOL_NAME || 'Biblioteca Escolar';
+const SCHOOL_NAME = () => Settings.get().school_name;
 
 exports.list = async (req, res) => {
   try {
@@ -200,6 +201,14 @@ exports.undo = async (req, res) => {
         revertBeforeState = { available_copies: book.available_copies };
         await Book.setAvailableCopies(entry.entity_id, before.available_copies);
         revertLabel = book.title;
+        break;
+      }
+
+      case 'site_settings_updated': {
+        if (!before) throw new Error('No hay datos guardados para restaurar.');
+        revertBeforeState = { ...Settings.get() };
+        await Settings.update(before, actor.username);
+        revertLabel = `${before.school_name} / ${before.library_name}`;
         break;
       }
 

@@ -12,8 +12,10 @@ const sharp = require('sharp');
 
 const coversDir = path.join(__dirname, '..', 'public', 'uploads', 'covers');
 const csvDir = path.join(__dirname, '..', 'public', 'uploads', 'csv');
+const brandingDir = path.join(__dirname, '..', 'public', 'uploads', 'branding');
 fs.mkdirSync(coversDir, { recursive: true });
 fs.mkdirSync(csvDir, { recursive: true });
+fs.mkdirSync(brandingDir, { recursive: true });
 
 // Tamaño máximo de una portada ya procesada. Una portada de libro no
 // necesita ser más grande que esto en ningún lugar de la interfaz —
@@ -77,6 +79,56 @@ async function processCoverImage(req, res, next) {
   }
 }
 
+// El logo del sitio se trata distinto a las portadas: puede llevar
+// transparencia (para verse bien sobre el header oscuro), así que
+// no se aplana a fondo blanco — se conserva como PNG con canal
+// alfa. Tamaño máximo más chico, ya que es un ícono, no una imagen
+// de portada.
+const LOGO_MAX_SIZE = 240;
+
+const logoUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 3 * 1024 * 1024 }, // 3MB
+  fileFilter: (req, file, cb) => {
+    const allowed = /jpeg|jpg|png|webp|svg/;
+    const ok = allowed.test(path.extname(file.originalname).toLowerCase());
+    cb(ok ? null : new Error('Formato de imagen no permitido. Usa JPG, PNG, WEBP o SVG.'), ok);
+  },
+});
+
+async function processLogoImage(req, res, next) {
+  if (!req.file) return next();
+
+  try {
+    const ext = path.extname(req.file.originalname).toLowerCase();
+    const unique = `logo-${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+
+    if (ext === '.svg') {
+      const filename = `${unique}.svg`;
+      await fs.promises.writeFile(path.join(brandingDir, filename), req.file.buffer);
+      req.file.filename = filename;
+      return next();
+    }
+
+    const filename = `${unique}.png`;
+    await sharp(req.file.buffer)
+      .rotate()
+      .resize({
+        width: LOGO_MAX_SIZE,
+        height: LOGO_MAX_SIZE,
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
+      .png({ quality: 90 }) // PNG conserva transparencia, a diferencia de JPEG
+      .toFile(path.join(brandingDir, filename));
+
+    req.file.filename = filename;
+    next();
+  } catch (err) {
+    next(err);
+  }
+}
+
 const csvStorage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, csvDir),
   filename: (req, file, cb) => cb(null, `import-${Date.now()}.csv`),
@@ -91,4 +143,4 @@ const csvUpload = multer({
   },
 });
 
-module.exports = { coverUpload, processCoverImage, csvUpload };
+module.exports = { coverUpload, processCoverImage, csvUpload, logoUpload, processLogoImage };

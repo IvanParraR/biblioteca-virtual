@@ -1,7 +1,8 @@
+const Settings = require('../models/Settings');
 const Category = require('../models/Category');
 const ActivityLog = require('../models/ActivityLog');
 
-const SCHOOL_NAME = () => process.env.SCHOOL_NAME || 'Biblioteca Escolar';
+const SCHOOL_NAME = () => Settings.get().school_name;
 
 exports.list = async (req, res) => {
   try {

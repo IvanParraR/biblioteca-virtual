@@ -7,8 +7,8 @@
   <section class="hero">
     <div class="container">
       <p class="hero-eyebrow">Catálogo digital escolar</p>
-      <h1>Encuentra tu próximo libro en la biblioteca de <%= schoolName %></h1>
-      <p>Busca por título, autor, ISBN o categoría y consulta al instante qué libros están disponibles, prestados o solo para consulta en sala.</p>
+      <h1><%= (typeof siteSettings !== 'undefined' && siteSettings.welcome_title) ? siteSettings.welcome_title : `Encuentra tu próximo libro en la biblioteca de ${schoolName}` %></h1>
+      <p><%= (typeof siteSettings !== 'undefined' && siteSettings.welcome_message) ? siteSettings.welcome_message : 'Busca por título, autor, ISBN o categoría y consulta al instante qué libros están disponibles, prestados o solo para consulta en sala.' %></p>
 
       <form action="/catalogo" method="GET" class="search-card" role="search">
         <input type="text" name="q" placeholder="Busca por título, autor, ISBN o categoría…" aria-label="Buscar libros">

@@ -77,6 +77,42 @@ CREATE TABLE IF NOT EXISTS admins (
 -- models/Book.js — para que nunca quede desincronizado.
 
 -- ---------------------------------------------------------
+-- Tabla: site_settings
+-- Fila única (id=1) con toda la información general del sitio,
+-- editable desde el panel por un gestor (Panel de administración
+-- → Información general), sin tocar el .env ni el código:
+-- presentación (logo, nombres), mensaje de bienvenida del inicio,
+-- contacto/horario (mostrado en el pie de página), paleta de
+-- colores del tema, y modo mantenimiento.
+-- ---------------------------------------------------------
+CREATE TABLE IF NOT EXISTS site_settings (
+  id                 INT PRIMARY KEY DEFAULT 1,
+  school_name        VARCHAR(150) NOT NULL,
+  library_name       VARCHAR(150) NOT NULL,
+  logo_url           VARCHAR(500) NULL,
+  color_palette      VARCHAR(30) NOT NULL DEFAULT 'bosque',
+  welcome_title      VARCHAR(255) NULL,
+  welcome_message    VARCHAR(500) NULL,
+  address            VARCHAR(255) NULL,
+  city               VARCHAR(150) NULL,
+  phone              VARCHAR(50)  NULL,
+  email              VARCHAR(150) NULL,
+  hours              VARCHAR(255) NULL,
+  social_facebook    VARCHAR(255) NULL,
+  social_instagram   VARCHAR(255) NULL,
+  social_twitter     VARCHAR(255) NULL,
+  social_whatsapp    VARCHAR(255) NULL,
+  maintenance_mode   TINYINT(1) NOT NULL DEFAULT 0,
+  updated_by         VARCHAR(100) NULL,
+  updated_at         DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT chk_settings_single_row CHECK (id = 1)
+) ENGINE=InnoDB;
+
+INSERT INTO site_settings (id, school_name, library_name, color_palette) VALUES
+(1, 'Colegio San Martín', 'Biblioteca Virtual', 'bosque')
+ON DUPLICATE KEY UPDATE id = id;
+
+-- ---------------------------------------------------------
 -- Tabla: login_lockouts
 -- Protección contra fuerza bruta: registra intentos fallidos por
 -- identificador (ej. "login:admin" o "secquestion:admin") y

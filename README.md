@@ -265,7 +265,39 @@ En PowerShell (Windows):
 Get-Content database/migrate_login_lockouts.sql | & "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -u root -p biblioteca_virtual
 ```
 
-## 11. Acciones masivas en la tabla de libros
+## 11. Información general (solo gestores)
+
+Desde **Panel de administración → Información general** (visible únicamente para cuentas con permiso de gestión), se edita toda la identidad y presentación del sitio, sin tocar código ni el archivo `.env`. Está dividido en 5 secciones:
+
+**1. Presentación del sitio** — logo (se sube igual que las portadas, con redimensionado automático, pero conservando transparencia como PNG), nombre de la institución y nombre de la biblioteca.
+
+**2. Color de acento del tema** — 5 paletas para elegir: Bosque (verde + dorado, la predeterminada), Océano (azul + coral), Atardecer (terracota + crema), Lavanda (púrpura + dorado suave), y Marino (azul marino + menta). El cambio se aplica a todo el sitio (estudiante y panel) al instante.
+
+**3. Mensaje de bienvenida** — título y bajada de texto libre para la página de inicio, reemplazando el mensaje genérico por defecto. Si se dejan vacíos, se usa el mensaje predeterminado.
+
+**4. Información de contacto y horario** — dirección, ciudad, teléfono, correo, horario de atención y redes sociales (Facebook, Instagram, X, WhatsApp). Se muestra en el **pie de página** del sitio de estudiantes — cada dato solo aparece si se configuró (no se ven campos vacíos).
+
+**5. Modo mantenimiento** — un interruptor que muestra un aviso ("catálogo en actualización") a los estudiantes en la parte superior del sitio, útil mientras se hace una carga masiva grande o una reorganización de categorías. **No bloquea nada**: los estudiantes siguen pudiendo navegar y buscar con normalidad, y el panel de administración no se ve afectado en absoluto.
+
+Todos los cambios se reflejan **al instante** en todo el sitio, sin reiniciar el servidor — se guardan en la base de datos y se mantienen en una caché en memoria para que cada página los muestre sin una consulta adicional. Guardar cambios aquí también queda registrado en el **Historial de actividad** y se puede **deshacer** como cualquier otra acción segura.
+
+**Si ya tenías el proyecto instalado antes de esta función**, ejecuta ambas migraciones en orden (la segunda depende de la primera):
+
+```bash
+mysql -u root -p biblioteca_virtual < database/migrate_site_settings.sql
+mysql -u root -p biblioteca_virtual < database/migrate_general_info.sql
+```
+
+En PowerShell (Windows):
+
+```powershell
+Get-Content database/migrate_site_settings.sql | & "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -u root -p biblioteca_virtual
+Get-Content database/migrate_general_info.sql | & "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -u root -p biblioteca_virtual
+```
+
+Si ya habías corrido `migrate_site_settings.sql` antes, `migrate_general_info.sql` detecta lo que falta y solo agrega las columnas nuevas, sin tocar el nombre del colegio/biblioteca que ya tenías configurado.
+
+## 12. Acciones masivas en la tabla de libros
 
 En **Panel de administración → Libros**, cada fila tiene un checkbox de selección (y uno en el encabezado para "seleccionar todos"). Al marcar uno o más, aparece una barra con dos acciones:
 
@@ -274,7 +306,7 @@ En **Panel de administración → Libros**, cada fila tiene un checkbox de selec
 
 Ambas acciones quedan registradas en el **Historial de actividad**, con el detalle de qué libros se vieron afectados. A diferencia de las acciones sobre un solo libro, las acciones masivas **no se pueden deshacer** desde el historial — por su mayor alcance, se optó por dejarlas fuera del sistema de "deshacer" (ver la sección de historial de actividad para el detalle de qué sí se puede deshacer).
 
-## 12. Portadas optimizadas automáticamente
+## 13. Portadas optimizadas automáticamente
 
 Al subir la portada de un libro (crear o editar), la imagen se procesa automáticamente antes de guardarse:
 
@@ -284,7 +316,7 @@ Al subir la portada de un libro (crear o editar), la imagen se procesa automáti
 
 Esto evita que el servidor acumule imágenes pesadas sin optimizar a medida que crece el catálogo. Requiere la librería `sharp`, que se instala automáticamente con `npm install`.
 
-## 13. Exportar el catálogo (Excel / PDF)
+## 14. Exportar el catálogo (Excel / PDF)
 
 Desde **Panel de administración → Libros**, los botones "Exportar Excel" y "Exportar PDF" descargan el catálogo completo, respetando los filtros que tengas activos en ese momento (búsqueda, categoría, disponibilidad) — si no aplicaste ningún filtro, se exporta todo.
 
@@ -293,7 +325,7 @@ Desde **Panel de administración → Libros**, los botones "Exportar Excel" y "E
 
 Cada exportación queda registrada en el **Historial de actividad**, indicando quién la generó, en qué formato, y con qué filtros.
 
-## 14. Importación masiva por CSV
+## 15. Importación masiva por CSV
 
 Desde **Panel de administración → Importar CSV**, se puede subir un archivo `.csv` con esta estructura:
 
@@ -304,7 +336,7 @@ El Quijote,Miguel de Cervantes,9788420412146,Literatura,Novela clásica español
 
 Campos obligatorios: `title`, `author`, `isbn`, `category`. Los demás son opcionales.
 
-## 15. Próximos pasos sugeridos
+## 16. Próximos pasos sugeridos
 
 - Implementar el flujo completo de préstamos (solicitud, devolución, historial).
 - Agregar recuperación de contraseña para administradores.

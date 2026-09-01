@@ -1,9 +1,10 @@
+const Settings = require('../models/Settings');
 const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 const Book = require('../models/Book');
 const ActivityLog = require('../models/ActivityLog');
 
-const SCHOOL_NAME = () => process.env.SCHOOL_NAME || 'Biblioteca Escolar';
+const SCHOOL_NAME = () => Settings.get().school_name;
 
 // Colores del sistema de diseño (verde bosque + dorado) reutilizados
 // en los reportes exportados, para que se sientan parte de la misma

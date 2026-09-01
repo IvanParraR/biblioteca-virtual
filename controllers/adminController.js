@@ -1,10 +1,11 @@
+const Settings = require('../models/Settings');
 const fs = require('fs');
 const csv = require('csv-parser');
 const Book = require('../models/Book');
 const Category = require('../models/Category');
 const ActivityLog = require('../models/ActivityLog');
 
-const SCHOOL_NAME = () => process.env.SCHOOL_NAME || 'Biblioteca Escolar';
+const SCHOOL_NAME = () => Settings.get().school_name;
 
 exports.dashboard = async (req, res) => {
   try {

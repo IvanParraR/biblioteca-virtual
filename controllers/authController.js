@@ -1,8 +1,9 @@
+const Settings = require('../models/Settings');
 const bcrypt = require('bcryptjs');
 const { pool } = require('../config/db');
 const LoginLockout = require('../models/LoginLockout');
 
-const SCHOOL_NAME = () => process.env.SCHOOL_NAME || 'Biblioteca Escolar';
+const SCHOOL_NAME = () => Settings.get().school_name;
 
 exports.showLogin = (req, res) => {
   res.render('admin/login', {

@@ -1,10 +1,19 @@
+<% if (typeof siteSettings !== 'undefined' && siteSettings.maintenance_mode) { %>
+<div class="maintenance-banner">
+  ⚠️ El catálogo está en actualización — algunos datos podrían no reflejar los cambios más recientes.
+</div>
+<% } %>
 <header class="site-header">
   <div class="container header-inner">
     <a href="/" class="brand">
-      <span class="brand-mark">B</span>
+      <% if (typeof siteSettings !== 'undefined' && siteSettings.logo_url) { %>
+        <img src="<%= siteSettings.logo_url %>" alt="Logo" class="brand-mark-img">
+      <% } else { %>
+        <span class="brand-mark">B</span>
+      <% } %>
       <span>
         <%= schoolName || schoolNameGlobal %>
-        <span class="brand-sub">Biblioteca Virtual</span>
+        <span class="brand-sub"><%= libraryNameGlobal %></span>
       </span>
     </a>
     <nav class="desktop-nav" aria-label="Navegación principal">

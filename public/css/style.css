@@ -135,6 +135,24 @@ img { max-width: 100%; display: block; }
   flex-shrink: 0;
 }
 
+.brand-mark-img {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  object-fit: contain;
+  background: rgba(255,255,255,0.08);
+  flex-shrink: 0;
+}
+
+.maintenance-banner {
+  background: var(--gold-600);
+  color: var(--forest-900);
+  text-align: center;
+  font-size: 0.84rem;
+  font-weight: 600;
+  padding: 9px 16px;
+}
+
 .brand-sub {
   display: block;
   font-family: var(--font-body);
@@ -762,6 +780,37 @@ table.admin-table { width: 100%; border-collapse: collapse; }
 .checkbox-field input { width: 16px; height: 16px; }
 .checkbox-field label { text-transform: none; font-size: 0.86rem; font-weight: 500; }
 
+/* ============================================================
+   PALETTE PICKER — Información general → paleta de colores
+   ============================================================ */
+.palette-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+.palette-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.palette-option:hover { border-color: var(--forest-600); }
+.palette-option.selected { border-color: var(--gold-600); background: var(--gold-100); }
+.palette-option input[type="radio"] { margin: 0; flex-shrink: 0; }
+.palette-swatches { display: flex; gap: -4px; flex-shrink: 0; }
+.palette-swatches .swatch {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--paper-raised);
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.08);
+}
+.palette-swatches .swatch + .swatch { margin-left: -8px; }
+.palette-name { font-size: 0.82rem; font-weight: 500; color: var(--ink-900); }
+
 .file-drop {
   border: 1.5px dashed var(--line);
   border-radius: var(--radius-md);
@@ -844,6 +893,35 @@ table.admin-table { width: 100%; border-collapse: collapse; }
   text-align: center;
 }
 .site-footer strong { color: var(--gold-500); }
+
+.footer-contact {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px 22px;
+  margin-bottom: 12px;
+  color: rgba(247,244,236,0.78);
+}
+.footer-contact a { color: rgba(247,244,236,0.78); text-decoration: underline; text-underline-offset: 2px; }
+
+.footer-social {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.footer-social a {
+  color: var(--gold-500);
+  font-weight: 600;
+  font-size: 0.78rem;
+}
+.footer-social a:hover { text-decoration: underline; }
+
+.footer-tagline.with-divider {
+  padding-top: 12px;
+  border-top: 1px solid rgba(247,244,236,0.12);
+}
 
 /* Utility */
 .text-center { text-align: center; }

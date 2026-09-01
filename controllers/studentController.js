@@ -1,6 +1,7 @@
+const Settings = require('../models/Settings');
 const Book = require('../models/Book');
 
-const SCHOOL_NAME = () => process.env.SCHOOL_NAME || 'Biblioteca Escolar';
+const SCHOOL_NAME = () => Settings.get().school_name;
 
 exports.home = async (req, res) => {
   try {

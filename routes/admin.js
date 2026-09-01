@@ -6,8 +6,9 @@ const categoryController = require('../controllers/categoryController');
 const accountController = require('../controllers/accountController');
 const activityLogController = require('../controllers/activityLogController');
 const exportController = require('../controllers/exportController');
+const settingsController = require('../controllers/settingsController');
 const { requireAdmin, requireAdminManager, checkForcedPasswordChange } = require('../middleware/auth');
-const { coverUpload, processCoverImage, csvUpload } = require('../middleware/upload');
+const { coverUpload, processCoverImage, csvUpload, logoUpload, processLogoImage } = require('../middleware/upload');
 
 router.use(requireAdmin);
 
@@ -53,6 +54,10 @@ router.post('/admins', requireAdminManager, adminManagementController.create);
 router.post('/admins/:id/toggle-permission', requireAdminManager, adminManagementController.togglePermission);
 router.post('/admins/:id/reset-temp-password', requireAdminManager, adminManagementController.assignTemporaryPassword);
 router.post('/admins/:id/delete', requireAdminManager, adminManagementController.deleteAdmin);
+
+// Configuración del sitio — solo cuentas con permiso de gestión
+router.get('/settings', requireAdminManager, settingsController.show);
+router.post('/settings', requireAdminManager, logoUpload.single('logo'), processLogoImage, settingsController.update);
 
 // Historial de actividad — visible para cualquier administrador
 router.get('/activity-log', activityLogController.list);
