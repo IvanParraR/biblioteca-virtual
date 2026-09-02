@@ -8,12 +8,20 @@
 require('dotenv').config();
 const mysql = require('mysql2/promise');
 
+// Railway (y otros PaaS) exponen la base de datos con sus propias
+// variables (MYSQLHOST, MYSQLPORT, etc. si usas su plugin de MySQL).
+// Se aceptan como respaldo de las variables DB_* de siempre, así el
+// mismo código corre en local y en Railway sin tocar nada: en Railway
+// basta con crear las variables DB_HOST, DB_USER, etc. en el servicio
+// y apuntarlas a las del plugin de MySQL (ej. ${{MySQL.MYSQLHOST}}),
+// o directamente dejar que estos respaldos las tomen si coinciden en
+// nombre. Ver DEPLOY.md para el paso a paso.
 const pool = mysql.createPool({
-  host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 3306,
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'biblioteca_virtual',
+  host: process.env.DB_HOST || process.env.MYSQLHOST || 'localhost',
+  port: process.env.DB_PORT || process.env.MYSQLPORT || 3306,
+  user: process.env.DB_USER || process.env.MYSQLUSER || 'root',
+  password: process.env.DB_PASSWORD || process.env.MYSQLPASSWORD || '',
+  database: process.env.DB_NAME || process.env.MYSQLDATABASE || 'biblioteca_virtual',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,

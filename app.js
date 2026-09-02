@@ -14,6 +14,13 @@ const authRoutes = require('./routes/auth');
 
 const app = express();
 
+// Railway (y la mayoría de PaaS) ponen la app detrás de un proxy que
+// termina el HTTPS por ella. Sin esto, Express no confía en el
+// encabezado X-Forwarded-* que manda ese proxy, y cosas como
+// req.secure o cookies "secure" quedarían mal detectadas en
+// producción. En local (sin proxy) no cambia nada.
+app.set('trust proxy', 1);
+
 // ---------- Configuración de vistas ----------
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
