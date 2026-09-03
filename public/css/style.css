@@ -204,6 +204,12 @@ img { max-width: 100%; display: block; }
 @media (max-width: 860px) {
   .desktop-nav { display: none; }
   .header-cta { display: none; }
+  /* Con el botón hamburguesa del admin visible en este ancho, el
+     header pasa a tener 2 elementos (botón + logo) en vez de 1;
+     los alineamos juntos a la izquierda en vez de separarlos a los
+     extremos. En el header de estudiantes (que solo tiene el logo
+     visible acá) esto no cambia nada. */
+  .header-inner { justify-content: flex-start; gap: 10px; }
 }
 
 /* ============================================================
@@ -677,9 +683,86 @@ img { max-width: 100%; display: block; }
 
 .admin-main { flex: 1; padding: 32px 32px 80px; min-width: 0; }
 
+/* Botón hamburguesa: solo existe visualmente en móvil */
+.admin-menu-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  margin-right: 6px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--paper);
+  cursor: pointer;
+}
+.admin-menu-btn:hover { background: rgba(255,255,255,0.08); }
+
+.admin-sidebar-backdrop { display: none; }
+
+.admin-sidebar-mobile-only { display: none; }
+.admin-sidebar-logout {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: rgba(247,244,236,0.75);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+.admin-sidebar-logout:hover { background: rgba(255,255,255,0.06); color: var(--paper); }
+
 @media (max-width: 860px) {
-  .admin-sidebar { display: none; }
+  .admin-menu-btn { display: flex; }
+
+  /* El sidebar deja de ocultarse: pasa a ser un panel que se desliza
+     desde la izquierda, por encima del contenido, y solo se ve
+     cuando se le agrega la clase "open" con el botón hamburguesa. */
+  .admin-sidebar {
+    position: fixed;
+    top: var(--header-h);
+    left: 0;
+    bottom: 0;
+    width: 260px;
+    max-width: 82vw;
+    overflow-y: auto;
+    z-index: 55;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.35);
+  }
+  .admin-sidebar.open { transform: translateX(0); }
+
+  .admin-sidebar-backdrop {
+    display: block;
+    position: fixed;
+    top: var(--header-h);
+    left: 0; right: 0; bottom: 0;
+    background: rgba(15,26,20,0.5);
+    z-index: 50;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+  .admin-sidebar-backdrop.open { opacity: 1; pointer-events: auto; }
+
+  .admin-sidebar-mobile-only {
+    display: block;
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255,255,255,0.12);
+  }
+
   .admin-main { padding: 20px 16px 84px; }
+  body.admin-sidebar-open { overflow: hidden; }
 }
 
 .admin-page-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 26px; }

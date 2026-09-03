@@ -1,5 +1,8 @@
 <header class="site-header">
   <div class="container header-inner">
+    <button type="button" class="admin-menu-btn" id="admin-menu-btn" aria-label="Abrir menú" aria-expanded="false" aria-controls="admin-sidebar">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
     <a href="/admin/dashboard" class="brand">
       <% if (typeof siteSettings !== 'undefined' && siteSettings.logo_url) { %>
         <img src="<%= siteSettings.logo_url %>" alt="Logo" class="brand-mark-img">
@@ -22,7 +25,8 @@
 </header>
 
 <div class="admin-shell">
-  <aside class="admin-sidebar">
+  <div class="admin-sidebar-backdrop" id="admin-sidebar-backdrop"></div>
+  <aside class="admin-sidebar" id="admin-sidebar">
     <a href="/admin/dashboard" class="<%= currentPath === '/admin/dashboard' ? 'active' : '' %>">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
       Panel general
@@ -61,6 +65,54 @@
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><path d="M15 3h6v6M10 14L21 3"/></svg>
       Ver sitio de estudiantes
     </a>
+
+    <div class="admin-sidebar-mobile-only">
+      <a href="/admin/account" class="<%= currentPath === '/admin/account' ? 'active' : '' %>">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
+        Mi cuenta (<%= admin ? admin.full_name || admin.username : '' %>)
+      </a>
+      <form action="/admin/logout" method="POST" style="margin:0;">
+        <button type="submit" class="admin-sidebar-logout">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+          Cerrar sesión
+        </button>
+      </form>
+    </div>
   </aside>
+
+  <script>
+    (function () {
+      var btn = document.getElementById('admin-menu-btn');
+      var sidebar = document.getElementById('admin-sidebar');
+      var backdrop = document.getElementById('admin-sidebar-backdrop');
+      if (!btn || !sidebar || !backdrop) return;
+
+      function closeMenu() {
+        sidebar.classList.remove('open');
+        backdrop.classList.remove('open');
+        btn.setAttribute('aria-expanded', 'false');
+        document.body.classList.remove('admin-sidebar-open');
+      }
+      function openMenu() {
+        sidebar.classList.add('open');
+        backdrop.classList.add('open');
+        btn.setAttribute('aria-expanded', 'true');
+        document.body.classList.add('admin-sidebar-open');
+      }
+
+      btn.addEventListener('click', function () {
+        if (sidebar.classList.contains('open')) closeMenu(); else openMenu();
+      });
+      backdrop.addEventListener('click', closeMenu);
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeMenu();
+      });
+      // Cierra el panel al navegar a otra sección, para no dejarlo
+      // abierto tapando la siguiente página.
+      sidebar.querySelectorAll('a').forEach(function (link) {
+        link.addEventListener('click', closeMenu);
+      });
+    })();
+  </script>
 
   <main class="admin-main">
