@@ -89,15 +89,12 @@
                 <div class="actions-cell">
                   <a href="/libro/<%= b.id %>" target="_blank" class="btn btn-outline btn-sm">Ver</a>
                   <a href="/admin/books/<%= b.id %>/edit" class="btn btn-outline btn-sm">Editar</a>
+                  <% if (b.available_copies > 0 && !b.library_only) { %>
+                    <a href="/admin/loans/new?book_id=<%= b.id %>" class="btn btn-outline btn-sm">Prestar</a>
+                  <% } %>
 
-                  <form action="/admin/books/<%= b.id %>/add-copies" method="POST" style="display:inline; margin:0;">
-                    <input type="hidden" name="amount" value="1">
-                    <button type="submit" class="btn btn-outline btn-sm" title="Marcar 1 copia como disponible (ej. se devolvió)" <%= b.available_copies >= b.total_copies ? 'disabled' : '' %>>+1</button>
-                  </form>
-                  <form action="/admin/books/<%= b.id %>/remove-copies" method="POST" style="display:inline; margin:0;">
-                    <input type="hidden" name="amount" value="1">
-                    <button type="submit" class="btn btn-outline btn-sm" title="Marcar 1 copia como no disponible (ej. se prestó)" <%= b.available_copies === 0 ? 'disabled' : '' %>>-1</button>
-                  </form>
+                  <button type="button" class="btn btn-outline btn-sm js-add-copy-trigger" data-book-id="<%= b.id %>" data-title="<%= b.title %>" title="Marcar 1 copia como disponible" <%= b.available_copies >= b.total_copies ? 'disabled' : '' %>>+1</button>
+                  <button type="button" class="btn btn-outline btn-sm js-remove-copy-trigger" data-book-id="<%= b.id %>" data-title="<%= b.title %>" title="Marcar 1 copia como no disponible" <%= b.available_copies === 0 ? 'disabled' : '' %>>-1</button>
 
                   <button type="button" class="btn btn-danger btn-sm js-delete-trigger" data-title="<%= b.title %>" data-action="/admin/books/<%= b.id %>/delete">Eliminar</button>
                 </div>
@@ -149,7 +146,69 @@
     </div>
   </div>
 
+  <!-- Modal: marcar 1 copia como no disponible (-1) -->
+  <div class="modal-backdrop" id="remove-copy-modal">
+    <div class="modal-box">
+      <h3>Marcar copia no disponible</h3>
+      <p>Vas a bajar en 1 las copias disponibles de "<strong id="remove-copy-book-title"></strong>". ¿Por qué motivo?</p>
+
+      <div class="modal-actions" style="justify-content:flex-start; flex-wrap:wrap; margin-bottom:14px;">
+        <a href="#" id="remove-copy-as-loan" class="btn btn-gold btn-sm">Es un préstamo — ir a registrarlo</a>
+      </div>
+
+      <a href="#" id="remove-copy-toggle-reason" style="color:var(--forest-700); font-weight:600; font-size:0.88rem;">+ Es otro motivo (dañado, perdido, en reparación…)</a>
+
+      <form id="remove-copy-form" method="POST" style="margin-top:14px;">
+        <input type="hidden" name="amount" value="1">
+        <input type="hidden" name="redirect_to" id="remove-copy-redirect-to">
+        <div id="remove-copy-reason-wrap" style="display:none;">
+          <div class="field">
+            <label for="remove-copy-reason">Motivo</label>
+            <input type="text" id="remove-copy-reason" name="reason" placeholder="Ej. Copia dañada, retirada de circulación">
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" id="remove-copy-cancel">Cancelar</button>
+          <button type="submit" class="btn btn-danger" id="remove-copy-submit" style="display:none;">Confirmar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: marcar 1 copia como disponible (+1) -->
+  <div class="modal-backdrop" id="add-copy-modal">
+    <div class="modal-box">
+      <h3>Marcar copia disponible</h3>
+      <p>Vas a subir en 1 las copias disponibles de "<strong id="add-copy-book-title"></strong>". ¿Por qué motivo?</p>
+
+      <div id="add-copy-loans-list"></div>
+
+      <a href="#" id="add-copy-toggle-reason" style="color:var(--forest-700); font-weight:600; font-size:0.88rem;">+ Es otro motivo (se encontró, copia nueva, corrección…)</a>
+
+      <form id="add-copy-form" method="POST" style="margin-top:14px;">
+        <input type="hidden" name="amount" value="1">
+        <input type="hidden" name="redirect_to" id="add-copy-redirect-to">
+        <div id="add-copy-reason-wrap" style="display:none;">
+          <div class="field">
+            <label for="add-copy-reason">Motivo</label>
+            <input type="text" id="add-copy-reason" name="reason" placeholder="Ej. Se encontró la copia extraviada">
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" id="add-copy-cancel">Cancelar</button>
+          <button type="submit" class="btn btn-danger" id="add-copy-submit" style="display:none;">Confirmar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    window.__activeLoansByBook = <%- JSON.stringify(activeLoansByBook || {}) %>;
+    window.__currentPageUrl = <%- JSON.stringify(currentUrl || '/admin/books') %>;
+  </script>
+
   <%- include('../partials/footer-admin') %>
   <script src="/js/admin.js"></script>
+  <script src="/js/copy-modals.js"></script>
 </body>
 </html>

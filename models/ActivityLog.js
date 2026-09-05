@@ -44,6 +44,10 @@ const ACTION_TYPES = {
   book_bulk_deleted: { label: 'Eliminó en lote', entity_type: 'book' },
   book_bulk_category_changed: { label: 'Cambió la categoría en lote de', entity_type: 'book' },
   site_settings_updated: { label: 'Actualizó la configuración del sitio', entity_type: 'settings' },
+  loan_created: { label: 'Registró el préstamo de', entity_type: 'loan' },
+  loan_returned: { label: 'Registró la devolución de', entity_type: 'loan' },
+  loan_renewed: { label: 'Renovó el préstamo de', entity_type: 'loan' },
+  loans_exported: { label: 'Exportó el historial de préstamos', entity_type: 'loan' },
 };
 
 const ENTITY_LABELS = {
@@ -51,12 +55,19 @@ const ENTITY_LABELS = {
   category: 'Categoría',
   admin: 'Administrador',
   settings: 'Configuración',
+  loan: 'Préstamo',
 };
 
 // Únicamente estas acciones son "seguras" de deshacer: cambian un
 // solo valor o revierten con un snapshot simple, sin efectos en
 // cascada. Fusiones, contraseñas temporales y cambios de la propia
 // contraseña quedan fuera a propósito (ver conversación de diseño).
+// Los préstamos también quedan fuera a propósito: deshacer un
+// préstamo borraría el registro (no solo restauraría un valor) y
+// deshacer una devolución podría chocar con las copias disponibles
+// si el libro ya se volvió a prestar mientras tanto — más riesgo que
+// beneficio para una acción que ya tiene su propio flujo de reversa
+// natural (marcar como devuelto).
 const UNDOABLE_ACTIONS = new Set([
   'book_created', 'book_updated', 'book_deleted',
   'category_created', 'category_renamed', 'category_deleted',

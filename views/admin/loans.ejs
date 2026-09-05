@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+<%- include('../partials/head') %>
+<body>
+  <%- include('../partials/nav-admin') %>
+
+  <div class="admin-page-head">
+    <div>
+      <h1 style="margin-bottom:2px;">Préstamos</h1>
+      <p style="color:var(--ink-600); font-size:0.9rem;">
+        <% if (activeView === 'active') { %>
+          <%= loans.length %> préstamo<%= loans.length === 1 ? '' : 's' %> activo<%= loans.length === 1 ? '' : 's' %>.
+        <% } else { %>
+          Historial completo de préstamos y devoluciones.
+        <% } %>
+      </p>
+    </div>
+    <a href="/admin/loans/new" class="btn btn-gold">+ Nuevo préstamo</a>
+  </div>
+
+  <% if (successMsg && successMsg.length) { %><div class="alert alert-success"><%= successMsg[0] %></div><% } %>
+  <% if (errorMsg && errorMsg.length) { %><div class="alert alert-error"><%= errorMsg[0] %></div><% } %>
+
+  <div style="display:flex; gap:8px; margin-bottom:18px; border-bottom:1px solid var(--forest-100); padding-bottom:0; flex-wrap:wrap; justify-content:space-between;">
+    <div style="display:flex; gap:8px;">
+      <a href="/admin/loans?view=active" class="btn <%= activeView === 'active' ? 'btn-primary' : 'btn-outline' %> btn-sm">Activos</a>
+      <a href="/admin/loans?view=history" class="btn <%= activeView === 'history' ? 'btn-primary' : 'btn-outline' %> btn-sm">Historial</a>
+    </div>
+    <% if (activeView === 'history') { %>
+      <% const exportQs = new URLSearchParams({ q }).toString(); %>
+      <div style="display:flex; gap:8px;">
+        <a href="/admin/loans/export/excel?<%= exportQs %>" class="btn btn-outline btn-sm" title="Exporta el historial con el filtro actual">Exportar Excel</a>
+        <a href="/admin/loans/export/pdf?<%= exportQs %>" class="btn btn-outline btn-sm" title="Exporta el historial con el filtro actual">Exportar PDF</a>
+      </div>
+    <% } %>
+  </div>
+
+  <form action="/admin/loans" method="GET" class="filter-bar">
+    <input type="hidden" name="view" value="<%= activeView %>">
+    <div class="field" style="grid-column: span 2;">
+      <label for="q">Buscar</label>
+      <input type="text" id="q" name="q" value="<%= q %>" placeholder="Libro, estudiante o código…">
+    </div>
+    <div class="field">
+      <button type="submit" class="btn btn-primary btn-block">Filtrar</button>
+    </div>
+  </form>
+
+  <% if (loans.length > 0) { %>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Libro</th>
+            <th>Estudiante</th>
+            <th>Prestado el</th>
+            <th>Fecha límite</th>
+            <% if (activeView === 'history') { %><th>Devuelto el</th><% } %>
+            <th>Estado</th>
+            <% if (activeView === 'active') { %><th>Acciones</th><% } %>
+          </tr>
+        </thead>
+        <tbody>
+          <% loans.forEach(l => { %>
+            <tr>
+              <td data-label="Libro" class="table-title-cell"><%= l.book_title %></td>
+              <td data-label="Estudiante">
+                <%= l.student_name %>
+                <% if (l.student_code) { %><br><span style="color:var(--ink-600); font-size:0.8rem;"><%= l.student_code %></span><% } %>
+              </td>
+              <td data-label="Prestado el"><%= new Date(l.loaned_at).toLocaleDateString('es-CO') %></td>
+              <td data-label="Fecha límite"><%= new Date(l.due_date).toLocaleDateString('es-CO') %></td>
+              <% if (activeView === 'history') { %>
+                <td data-label="Devuelto el"><%= l.returned_at ? new Date(l.returned_at).toLocaleDateString('es-CO') : '—' %></td>
+              <% } %>
+              <td data-label="Estado">
+                <% if (l.returned_at) { %>
+                  <span class="badge badge-devuelto">Devuelto</span>
+                <% } else if (l.is_overdue) { %>
+                  <span class="badge badge-atrasado">Atrasado</span>
+                <% } else { %>
+                  <span class="badge badge-a_tiempo">A tiempo</span>
+                <% } %>
+              </td>
+              <% if (activeView === 'active') { %>
+                <td data-label="Acciones" style="white-space:nowrap;">
+                  <% if (l.renewal_count < maxRenewals) { %>
+                    <form action="/admin/loans/<%= l.id %>/renew" method="POST" style="display:inline; margin:0;">
+                      <input type="hidden" name="redirect_to" value="<%= currentUrl %>">
+                      <button type="submit" class="btn btn-outline btn-sm">Renovar (+<%= loanDays %> días)</button>
+                    </form>
+                  <% } %>
+                  <form action="/admin/loans/<%= l.id %>/return" method="POST" style="display:inline; margin:0;">
+                    <input type="hidden" name="redirect_to" value="<%= currentUrl %>">
+                    <button type="submit" class="btn btn-outline btn-sm">Marcar como devuelto</button>
+                  </form>
+                </td>
+              <% } %>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+    <% if (activeView === 'history' && totalPages > 1) { %>
+      <nav class="pagination" aria-label="Paginación">
+        <% for (let p = 1; p <= totalPages; p++) { %>
+          <% const qs = new URLSearchParams({ view: 'history', q, page: p }).toString(); %>
+          <% if (p === currentPage) { %><span class="current"><%= p %></span>
+          <% } else { %><a href="/admin/loans?<%= qs %>"><%= p %></a><% } %>
+        <% } %>
+      </nav>
+    <% } %>
+  <% } else { %>
+    <div class="empty-state">
+      <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+      <h3><%= activeView === 'active' ? 'No hay préstamos activos' : 'Aún no hay historial de préstamos' %></h3>
+      <p>Registra un préstamo nuevo para empezar.</p>
+      <div style="margin-top:18px;"><a href="/admin/loans/new" class="btn btn-gold">+ Nuevo préstamo</a></div>
+    </div>
+  <% } %>
+
+  <%- include('../partials/footer-admin') %>
+</body>
+</html>

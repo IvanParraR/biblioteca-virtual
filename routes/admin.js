@@ -7,6 +7,7 @@ const accountController = require('../controllers/accountController');
 const activityLogController = require('../controllers/activityLogController');
 const exportController = require('../controllers/exportController');
 const settingsController = require('../controllers/settingsController');
+const loanController = require('../controllers/loanController');
 const { requireAdmin, requireAdminManager, checkForcedPasswordChange } = require('../middleware/auth');
 const { coverUpload, processCoverImage, csvUpload, logoUpload, processLogoImage } = require('../middleware/upload');
 
@@ -22,9 +23,19 @@ router.use(checkForcedPasswordChange);
 
 router.get('/dashboard', adminController.dashboard);
 
+// Préstamos — cualquier cuenta de administrador puede registrarlos
+router.get('/loans', loanController.list);
+router.get('/loans/new', loanController.showNewForm);
+router.get('/students/search', loanController.searchStudents);
+router.post('/loans', loanController.create);
+router.post('/loans/:id/return', loanController.markReturned);
+router.post('/loans/:id/renew', loanController.renew);
+
 router.get('/books', adminController.listBooks);
 router.get('/books/export/excel', exportController.exportExcel);
 router.get('/books/export/pdf', exportController.exportPdf);
+router.get('/loans/export/excel', exportController.exportLoansExcel);
+router.get('/loans/export/pdf', exportController.exportLoansPdf);
 router.get('/books/new', adminController.showAddForm);
 router.post('/books', coverUpload.single('cover'), processCoverImage, adminController.createBook);
 

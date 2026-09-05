@@ -139,6 +139,17 @@
       </div>
     </div>
 
+    <div class="form-card" style="margin-bottom:24px;">
+      <h2 style="font-size:1.05rem; margin-bottom:6px;">6. Préstamos</h2>
+      <p class="field-hint" style="margin-bottom:14px;">Duración por defecto al registrar un préstamo nuevo — cada préstamo individual sigue pudiéndose ajustar aparte desde el formulario de "Nuevo préstamo".</p>
+      <div class="form-grid">
+        <div class="field">
+          <label for="loan_days_default">Días de préstamo por defecto</label>
+          <input type="number" id="loan_days_default" name="loan_days_default" min="1" max="90" value="<%= settings.loan_days_default %>" style="max-width:120px;">
+        </div>
+      </div>
+    </div>
+
     <% if (settings.updated_by) { %>
       <p class="field-hint" style="margin-bottom:16px;">
         Última actualización por <strong><%= settings.updated_by %></strong>

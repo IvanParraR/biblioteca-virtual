@@ -32,6 +32,7 @@ const DEFAULTS = {
   social_twitter: '',
   social_whatsapp: '',
   maintenance_mode: false,
+  loan_days_default: 7,
 };
 
 let cache = { ...DEFAULTS };
@@ -44,7 +45,7 @@ const FIELDS = [
   'welcome_title', 'welcome_message',
   'address', 'city', 'phone', 'email', 'hours',
   'social_facebook', 'social_instagram', 'social_twitter', 'social_whatsapp',
-  'maintenance_mode',
+  'maintenance_mode', 'loan_days_default',
 ];
 
 const Settings = {

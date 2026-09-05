@@ -39,6 +39,14 @@
       <div class="stat-label">Libros no disponibles</div>
       <div class="stat-value"><%= stats.totals.unavailable_books %></div>
     </div>
+    <a href="/admin/loans" class="stat-card" style="text-decoration:none; display:block;">
+      <div class="stat-label">Préstamos activos</div>
+      <div class="stat-value"><%= loanStats.active %></div>
+    </a>
+    <a href="/admin/loans" class="stat-card <%= loanStats.overdue > 0 ? 'accent' : '' %>" style="text-decoration:none; display:block;">
+      <div class="stat-label">Préstamos atrasados</div>
+      <div class="stat-value"><%= loanStats.overdue %></div>
+    </a>
   </div>
 
   <div style="display:grid; grid-template-columns: 1.3fr 1fr; gap:24px;" class="dash-grid">

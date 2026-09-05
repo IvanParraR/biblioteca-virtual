@@ -28,13 +28,16 @@ exports.update = async (req, res) => {
       welcome_title, welcome_message,
       address, city, phone, email, hours,
       social_facebook, social_instagram, social_twitter, social_whatsapp,
-      maintenance_mode,
+      maintenance_mode, loan_days_default,
     } = req.body;
 
     if (!school_name || !school_name.trim() || !library_name || !library_name.trim()) {
       req.flash('error', 'El nombre del colegio y de la biblioteca son obligatorios.');
       return res.redirect('/admin/settings');
     }
+
+    const parsedLoanDays = parseInt(loan_days_default, 10);
+    const loanDaysDefault = Number.isInteger(parsedLoanDays) && parsedLoanDays > 0 ? parsedLoanDays : 7;
 
     const paletteKey = PALETTES[color_palette] ? color_palette : 'bosque';
 
@@ -60,6 +63,7 @@ exports.update = async (req, res) => {
       social_twitter: (social_twitter || '').trim(),
       social_whatsapp: (social_whatsapp || '').trim(),
       maintenance_mode: maintenance_mode === 'on',
+      loan_days_default: loanDaysDefault,
     };
 
     await Settings.update(newFields, req.session.admin.username);

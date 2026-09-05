@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="es">
+<%- include('../partials/head') %>
+<body>
+  <%- include('../partials/nav-admin') %>
+
+  <div class="admin-page-head">
+    <div>
+      <h1 style="margin-bottom:2px;">Nuevo préstamo</h1>
+      <p style="color:var(--ink-600); font-size:0.9rem;">Solo aparecen libros con copias disponibles que no sean de solo consulta en sala.</p>
+    </div>
+  </div>
+
+  <% if (errorMsg && errorMsg.length) { %><div class="alert alert-error"><%= errorMsg[0] %></div><% } %>
+
+  <div class="form-card">
+    <form action="/admin/loans" method="POST">
+      <div class="form-grid">
+        <div class="field field-full">
+          <label for="book_id">Libro *</label>
+          <select id="book_id" name="book_id" required <%= books.length === 0 ? 'disabled' : '' %>>
+            <option value="">Selecciona un libro…</option>
+            <% books.forEach(b => { %>
+              <option value="<%= b.id %>" <%= preselectedBookId === b.id ? 'selected' : '' %>>
+                <%= b.title %> — <%= b.author %> (<%= b.available_copies %> disponible<%= b.available_copies === 1 ? '' : 's' %>)
+              </option>
+            <% }) %>
+          </select>
+          <% if (books.length === 0) { %>
+            <span class="field-hint">No hay libros disponibles para prestar en este momento (sin copias libres, o todos son de solo consulta en sala).</span>
+          <% } %>
+        </div>
+
+        <div class="field field-full" id="student-field">
+          <label for="student_search">Estudiante *</label>
+          <div class="autocomplete-wrap">
+            <input type="text" id="student_search" autocomplete="off" placeholder="Escribe el código o el nombre del estudiante…">
+            <div id="student_suggestions" class="autocomplete-list" style="display:none;"></div>
+          </div>
+          <input type="hidden" id="student_id" name="student_id" value="">
+          <span class="field-hint" id="student_selected_hint"></span>
+          <span class="field-hint" id="student_error_hint" style="color:var(--status-unavailable-fg); display:none;">Busca y selecciona un estudiante de la lista, o registra uno nuevo.</span>
+          <span class="field-hint">
+            ¿No está en la lista?
+            <a href="#" id="toggle-new-student" style="color:var(--forest-700); font-weight:600;">+ Registrar estudiante nuevo</a>
+          </span>
+          <div id="new-student-wrap" style="display:none; margin-top:12px;">
+            <div class="form-grid">
+              <div class="field field-full">
+                <label for="new_student_name">Nombre completo</label>
+                <input type="text" id="new_student_name" name="new_student_name" placeholder="Ej. Ana María Torres">
+              </div>
+              <div class="field">
+                <label for="new_student_code">Código / carné (opcional)</label>
+                <input type="text" id="new_student_code" name="new_student_code" placeholder="Ej. 2026-0143">
+              </div>
+              <div class="field">
+                <label for="new_student_grade">Grado (opcional)</label>
+                <input type="text" id="new_student_grade" name="new_student_grade" placeholder="Ej. 9°B">
+              </div>
+            </div>
+          </div>
+          <input type="hidden" id="is_new_student" name="is_new_student" value="0">
+        </div>
+
+        <div class="field">
+          <label for="due_date">Fecha límite de devolución *</label>
+          <input type="date" id="due_date" name="due_date" value="<%= defaultDueDate %>" required>
+          <span class="field-hint">Por defecto son <%= loanDays %> días desde hoy — puedes ajustarla si este préstamo necesita otro plazo.</span>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:10px; margin-top:26px;">
+        <button type="submit" class="btn btn-gold" <%= books.length === 0 ? 'disabled' : '' %>>Registrar préstamo</button>
+        <a href="/admin/loans" class="btn btn-outline">Cancelar</a>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    (function () {
+      // ---------- Buscador de estudiantes con sugerencias en vivo ----------
+      const form = document.querySelector('form[action="/admin/loans"]');
+      const searchInput = document.getElementById('student_search');
+      const suggestionsBox = document.getElementById('student_suggestions');
+      const hiddenId = document.getElementById('student_id');
+      const selectedHint = document.getElementById('student_selected_hint');
+      const errorHint = document.getElementById('student_error_hint');
+      let debounceTimer = null;
+      let currentResults = [];
+      let activeIndex = -1;
+
+      function clearSelection() {
+        hiddenId.value = '';
+        selectedHint.textContent = '';
+      }
+
+      function renderSuggestions(students) {
+        currentResults = students;
+        activeIndex = -1;
+        if (students.length === 0) {
+          suggestionsBox.innerHTML = '<div class="autocomplete-empty">Sin coincidencias — puedes registrarlo como estudiante nuevo abajo.</div>';
+          suggestionsBox.style.display = 'block';
+          return;
+        }
+        suggestionsBox.innerHTML = students.map(function (s, i) {
+          const code = s.student_code ? '<span class="code">' + s.student_code + '</span> — ' : '';
+          const grade = s.grade ? ' <span style="color:var(--ink-400);">(' + s.grade + ')</span>' : '';
+          return '<div class="autocomplete-item" data-index="' + i + '">' + code + s.full_name + grade + '</div>';
+        }).join('');
+        suggestionsBox.style.display = 'block';
+      }
+
+      function selectStudent(s) {
+        hiddenId.value = s.id;
+        searchInput.value = (s.student_code ? s.student_code + ' — ' : '') + s.full_name;
+        selectedHint.textContent = 'Seleccionado: ' + s.full_name;
+        errorHint.style.display = 'none';
+        suggestionsBox.style.display = 'none';
+      }
+
+      searchInput.addEventListener('input', function () {
+        clearSelection();
+        const q = searchInput.value.trim();
+        clearTimeout(debounceTimer);
+        if (q.length < 1) {
+          suggestionsBox.style.display = 'none';
+          return;
+        }
+        debounceTimer = setTimeout(function () {
+          fetch('/admin/students/search?q=' + encodeURIComponent(q))
+            .then(function (r) { return r.json(); })
+            .then(renderSuggestions)
+            .catch(function () { suggestionsBox.style.display = 'none'; });
+        }, 200);
+      });
+
+      suggestionsBox.addEventListener('click', function (e) {
+        const item = e.target.closest('.autocomplete-item');
+        if (!item) return;
+        const idx = parseInt(item.dataset.index, 10);
+        if (currentResults[idx]) selectStudent(currentResults[idx]);
+      });
+
+      searchInput.addEventListener('keydown', function (e) {
+        if (suggestionsBox.style.display === 'none' || currentResults.length === 0) return;
+        const items = suggestionsBox.querySelectorAll('.autocomplete-item');
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          activeIndex = Math.min(activeIndex + 1, items.length - 1);
+          items.forEach(function (it, i) { it.classList.toggle('active', i === activeIndex); });
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          activeIndex = Math.max(activeIndex - 1, 0);
+          items.forEach(function (it, i) { it.classList.toggle('active', i === activeIndex); });
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          const idx = activeIndex >= 0 ? activeIndex : 0;
+          if (currentResults[idx]) selectStudent(currentResults[idx]);
+        } else if (e.key === 'Escape') {
+          suggestionsBox.style.display = 'none';
+        }
+      });
+
+      document.addEventListener('click', function (e) {
+        if (!e.target.closest('#student-field')) suggestionsBox.style.display = 'none';
+      });
+
+      // ---------- Toggle "+ Registrar estudiante nuevo" ----------
+      document.getElementById('toggle-new-student').addEventListener('click', function (e) {
+        e.preventDefault();
+        const wrap = document.getElementById('new-student-wrap');
+        const flag = document.getElementById('is_new_student');
+        const isOpening = wrap.style.display === 'none';
+        wrap.style.display = isOpening ? 'block' : 'none';
+        flag.value = isOpening ? '1' : '0';
+        searchInput.disabled = isOpening;
+        errorHint.style.display = 'none';
+        if (isOpening) {
+          searchInput.value = '';
+          clearSelection();
+          suggestionsBox.style.display = 'none';
+          document.getElementById('new_student_name').focus();
+        } else {
+          document.getElementById('new_student_name').value = '';
+          document.getElementById('new_student_code').value = '';
+          document.getElementById('new_student_grade').value = '';
+          searchInput.focus();
+        }
+      });
+
+      // ---------- Validación al enviar: el campo oculto student_id no
+      // valida solo (los navegadores ignoran "required" en inputs
+      // hidden), así que confirmamos a mano que haya un estudiante
+      // seleccionado o que se esté registrando uno nuevo. ----------
+      form.addEventListener('submit', function (e) {
+        const isNewStudent = document.getElementById('is_new_student').value === '1';
+        if (!isNewStudent && !hiddenId.value) {
+          e.preventDefault();
+          errorHint.style.display = 'inline';
+          searchInput.focus();
+        }
+      });
+    })();
+  </script>
+
+  <%- include('../partials/footer-admin') %>
+</body>
+</html>

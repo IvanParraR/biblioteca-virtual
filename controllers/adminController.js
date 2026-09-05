@@ -4,17 +4,19 @@ const csv = require('csv-parser');
 const Book = require('../models/Book');
 const Category = require('../models/Category');
 const ActivityLog = require('../models/ActivityLog');
+const Loan = require('../models/Loan');
 
 const SCHOOL_NAME = () => Settings.get().school_name;
 
 exports.dashboard = async (req, res) => {
   try {
-    const stats = await Book.stats();
+    const [stats, loanStats] = await Promise.all([Book.stats(), Loan.stats()]);
     res.render('admin/dashboard', {
       pageTitle: 'Panel de administración',
       schoolName: SCHOOL_NAME(),
       admin: req.session.admin,
       stats,
+      loanStats,
       dbConnected: true,
     });
   } catch (err) {
@@ -25,22 +27,42 @@ exports.dashboard = async (req, res) => {
       schoolName: SCHOOL_NAME(),
       admin: req.session.admin,
       stats: { totals: { total_books: 0, total_copies: 0, available_copies: 0, borrowed_copies: 0, unavailable_books: 0 }, byCategory: [], recent: [] },
+      loanStats: { active: 0, overdue: 0 },
       dbConnected: false,
     });
   }
+
 };
 
 exports.listBooks = async (req, res) => {
   try {
     const { q, category, availability, page } = req.query;
-    const result = await Book.search({ q, category, availability, page: parseInt(page, 10) || 1, perPage: 10 });
-    const categories = await Book.categories();
+    const [result, categories, activeLoans] = await Promise.all([
+      Book.search({ q, category, availability, page: parseInt(page, 10) || 1, perPage: 10 }),
+      Book.categories(),
+      Loan.listActive({}),
+    ]);
+    // Agrupa los préstamos activos por libro, para que el modal de
+    // "marcar disponible" (+1) pueda ofrecer devolver uno puntual
+    // en vez de solo subir el número a ciegas.
+    const activeLoansByBook = {};
+    activeLoans.forEach((l) => {
+      if (!activeLoansByBook[l.book_id]) activeLoansByBook[l.book_id] = [];
+      activeLoansByBook[l.book_id].push({
+        id: l.id,
+        student_name: l.student_name,
+        due_date: l.due_date,
+        is_overdue: !!l.is_overdue,
+      });
+    });
     res.render('admin/books', {
       pageTitle: 'Gestionar libros',
       schoolName: SCHOOL_NAME(),
       admin: req.session.admin,
       ...result,
       categories,
+      activeLoansByBook,
+      currentUrl: req.originalUrl,
       filters: { q: q || '', category: category || '', availability: availability || '' },
       dbConnected: true,
     });
@@ -52,7 +74,7 @@ exports.listBooks = async (req, res) => {
       schoolName: SCHOOL_NAME(),
       admin: req.session.admin,
       books: [], total: 0, totalPages: 1, currentPage: 1, perPage: 10,
-      categories: [], filters: { q: '', category: '', availability: '' },
+      categories: [], activeLoansByBook: {}, currentUrl: req.originalUrl, filters: { q: '', category: '', availability: '' },
       dbConnected: false,
     });
   }
@@ -242,6 +264,7 @@ exports.deleteBook = async (req, res) => {
 exports.addCopies = async (req, res) => {
   try {
     const amount = Math.max(1, parseInt(req.body.amount, 10) || 1);
+    const reason = req.body.reason ? req.body.reason.trim() : '';
     const book = await Book.findById(req.params.id);
     await Book.addCopies(req.params.id, amount);
     await ActivityLog.log({
@@ -250,7 +273,7 @@ exports.addCopies = async (req, res) => {
       actionType: 'book_copies_added',
       entityId: parseInt(req.params.id, 10),
       entityLabel: book ? book.title : `libro #${req.params.id}`,
-      details: `+${amount}`,
+      details: reason ? `+${amount} — ${reason}` : `+${amount}`,
       beforeState: book ? { available_copies: book.available_copies } : null,
     });
     req.flash('success', `Se agregaron ${amount} copia(s).`);
@@ -258,12 +281,13 @@ exports.addCopies = async (req, res) => {
     console.error(err);
     req.flash('error', 'No se pudieron agregar copias.');
   }
-  res.redirect('/admin/books');
+  res.redirect(req.body.redirect_to && req.body.redirect_to.startsWith('/admin/') ? req.body.redirect_to : '/admin/books');
 };
 
 exports.removeCopies = async (req, res) => {
   try {
     const amount = Math.max(1, parseInt(req.body.amount, 10) || 1);
+    const reason = req.body.reason ? req.body.reason.trim() : '';
     const book = await Book.findById(req.params.id);
     await Book.removeCopies(req.params.id, amount);
     await ActivityLog.log({
@@ -272,7 +296,7 @@ exports.removeCopies = async (req, res) => {
       actionType: 'book_copies_removed',
       entityId: parseInt(req.params.id, 10),
       entityLabel: book ? book.title : `libro #${req.params.id}`,
-      details: `-${amount}`,
+      details: reason ? `-${amount} — ${reason}` : `-${amount}`,
       beforeState: book ? { available_copies: book.available_copies } : null,
     });
     req.flash('success', `Se retiraron ${amount} copia(s).`);
@@ -280,7 +304,7 @@ exports.removeCopies = async (req, res) => {
     console.error(err);
     req.flash('error', 'No se pudieron retirar copias.');
   }
-  res.redirect('/admin/books');
+  res.redirect(req.body.redirect_to && req.body.redirect_to.startsWith('/admin/') ? req.body.redirect_to : '/admin/books');
 };
 
 // ------------------------------------------------------------
