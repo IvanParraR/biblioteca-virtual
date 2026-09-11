@@ -68,7 +68,16 @@ exports.create = async (req, res) => {
 
     const confirmUrl = `${baseUrl(req)}/admin/confirm-email/${confirmationToken}`;
     const { subject, html, text } = confirmationEmail({ schoolName: SCHOOL_NAME(), fullName: full_name, confirmUrl });
-    await sendMail({ to: cleanEmail, subject, html, text });
+    // Igual que en el registro de estudiante: la cuenta ya quedó
+    // creada arriba, así que un fallo de correo no debe reportarse
+    // como si hubiera fallado toda la creación.
+    let emailSent = true;
+    try {
+      await sendMail({ to: cleanEmail, subject, html, text });
+    } catch (mailErr) {
+      emailSent = false;
+      console.error('No se pudo enviar el correo de confirmación de cuenta:', mailErr.message);
+    }
 
     await ActivityLog.log({
       adminId: req.session.admin.id,
@@ -76,10 +85,14 @@ exports.create = async (req, res) => {
       actionType: 'admin_created',
       entityId: newAdminId,
       entityLabel: username,
-      details: `Correo: ${cleanEmail} — pendiente de confirmación (vence en 24h)`,
+      details: `Correo: ${cleanEmail} — pendiente de confirmación (vence en 24h)${emailSent ? '' : ' — el correo de confirmación falló al enviarse'}`,
     });
 
-    req.flash('success', `Se creó la cuenta "${username}" — le enviamos un correo a ${cleanEmail} para confirmarla. Tiene 24 horas antes de que la cuenta se elimine sola si no confirma.`);
+    if (emailSent) {
+      req.flash('success', `Se creó la cuenta "${username}" — le enviamos un correo a ${cleanEmail} para confirmarla. Tiene 24 horas antes de que la cuenta se elimine sola si no confirma.`);
+    } else {
+      req.flash('error', `Se creó la cuenta "${username}", pero no pudimos enviarle el correo de confirmación a ${cleanEmail} (hubo un problema técnico enviando correos — revisa la configuración de SMTP). La cuenta queda pendiente y se eliminará sola en 24 horas si no se confirma.`);
+    }
     res.redirect('/admin/admins');
   } catch (err) {
     console.error(err);

@@ -13,11 +13,21 @@
 //   SMTP_USER=tu-cuenta@gmail.com
 //   SMTP_PASSWORD=<contraseña de aplicación, 16 caracteres>
 //   SMTP_FROM=tu-cuenta@gmail.com
+//
+// SMTP_INSECURE_SKIP_TLS_VERIFY=true — SOLO PARA DIAGNÓSTICO LOCAL.
+// Ignora la validación del certificado TLS; existe para el caso de
+// "self-signed certificate in certificate chain" que suele causar
+// un antivirus o proxy interceptando el tráfico HTTPS en tu propia
+// máquina/red. Nunca actives esto en Railway ni en ningún entorno
+// real — baja la seguridad de la conexión (ya no confirma que de
+// verdad estás hablando con los servidores de Gmail). Quítala de tu
+// .env en cuanto termines de diagnosticar.
 // ============================================================
 const nodemailer = require('nodemailer');
 
 let transporter = null;
 let warnedOnce = false;
+let warnedInsecureOnce = false;
 
 function isConfigured() {
   return !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASSWORD);
@@ -26,6 +36,11 @@ function isConfigured() {
 function getTransporter() {
   if (!isConfigured()) return null;
   if (!transporter) {
+    const insecure = process.env.SMTP_INSECURE_SKIP_TLS_VERIFY === 'true';
+    if (insecure && !warnedInsecureOnce) {
+      console.warn('⚠️  SMTP_INSECURE_SKIP_TLS_VERIFY está activo — la validación del certificado TLS está DESACTIVADA. Esto es solo para diagnóstico local: quítalo de tu .env en cuanto termines de probar.');
+      warnedInsecureOnce = true;
+    }
     transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: parseInt(process.env.SMTP_PORT, 10) || 587,
@@ -34,6 +49,7 @@ function getTransporter() {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASSWORD,
       },
+      tls: insecure ? { rejectUnauthorized: false } : undefined,
     });
   }
   return transporter;

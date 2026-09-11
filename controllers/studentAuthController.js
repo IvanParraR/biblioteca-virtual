@@ -60,11 +60,29 @@ exports.register = async (req, res) => {
 
     const confirmUrl = `${baseUrl(req)}/confirmar-correo/${confirmationToken}`;
     const { subject, html, text } = confirmationEmail({ schoolName: SCHOOL_NAME(), fullName: full_name, confirmUrl });
-    await sendMail({ to: cleanEmail, subject, html, text });
+    // El envío va aparte de la creación de la cuenta a propósito: la
+    // cuenta ya quedó creada en la base en la línea de arriba, así
+    // que si el correo falla (SMTP mal configurado, credenciales
+    // rechazadas, etc.) no debe verse como si hubiera fallado el
+    // registro completo — el estudiante ya existe, solo que el
+    // correo de confirmación no salió. Se intenta enviar sin
+    // bloquear la respuesta, y si falla, queda en el log del
+    // servidor para que el admin lo note.
+    let emailSent = true;
+    try {
+      await sendMail({ to: cleanEmail, subject, html, text });
+    } catch (mailErr) {
+      emailSent = false;
+      console.error('No se pudo enviar el correo de confirmación de cuenta:', mailErr.message);
+    }
 
-    req.flash('success', claimed
-      ? `Encontramos tu registro con ese código y le agregamos tu cuenta — te enviamos un correo a ${cleanEmail} para confirmarla. Tienes 24 horas.`
-      : `Cuenta creada — te enviamos un correo a ${cleanEmail} para confirmarla. Tienes 24 horas antes de que se elimine sola si no confirmas.`);
+    if (emailSent) {
+      req.flash('success', claimed
+        ? `Encontramos tu registro con ese código y le agregamos tu cuenta — te enviamos un correo a ${cleanEmail} para confirmarla. Tienes 24 horas.`
+        : `Cuenta creada — te enviamos un correo a ${cleanEmail} para confirmarla. Tienes 24 horas antes de que se elimine sola si no confirmas.`);
+    } else {
+      req.flash('error', `Tu cuenta se creó, pero no pudimos enviarte el correo de confirmación a ${cleanEmail} (hubo un problema técnico enviando correos). Avisa a la biblioteca para que lo revisen — tu cuenta quedará pendiente y se eliminará sola en 24 horas si no se confirma.`);
+    }
     res.redirect('/iniciar-sesion');
   } catch (err) {
     if (err.code === 'ALREADY_CLAIMED') {
