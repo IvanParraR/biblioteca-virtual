@@ -1,11 +1,24 @@
 const Settings = require('../models/Settings');
 const Admin = require('../models/Admin');
+const EmailDomain = require('../models/EmailDomain');
 const ActivityLog = require('../models/ActivityLog');
+const { sendMail } = require('../config/mailer');
+const { confirmationEmail } = require('../utils/emailTemplates');
+const { isPasswordValid, passwordHint } = require('../utils/passwordPolicy');
 
 const SCHOOL_NAME = () => Settings.get().school_name;
 
+// Construye el enlace de confirmación. APP_URL debe apuntar al
+// dominio público real (ej. https://tu-app.up.railway.app) — se
+// configura como variable de entorno; si falta, se usa el host de
+// la propia petición como respaldo razonable.
+function baseUrl(req) {
+  return process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+}
+
 exports.list = async (req, res) => {
   try {
+    await Admin.deleteExpiredPending();
     const admins = await Admin.all();
     res.render('admin/admins', {
       pageTitle: 'Administradores',
@@ -22,23 +35,40 @@ exports.list = async (req, res) => {
 
 exports.create = async (req, res) => {
   try {
-    const { username, password, full_name, can_manage_admins } = req.body;
+    const { username, password, email, full_name, can_manage_admins } = req.body;
 
-    if (!username || !password) {
-      req.flash('error', 'El usuario y la contraseña son obligatorios.');
+    if (!username || !password || !email) {
+      req.flash('error', 'El usuario, el correo y la contraseña son obligatorios.');
       return res.redirect('/admin/admins');
     }
-    if (password.length < 8) {
-      req.flash('error', 'La contraseña debe tener al menos 8 caracteres.');
+    if (!isPasswordValid(password)) {
+      req.flash('error', `Contraseña insegura. ${passwordHint()}`);
+      return res.redirect('/admin/admins');
+    }
+    const cleanEmail = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      req.flash('error', 'Ese correo no tiene un formato válido.');
       return res.redirect('/admin/admins');
     }
 
-    const newAdminId = await Admin.create({
+    const domainAllowed = await EmailDomain.isAllowed(cleanEmail);
+    if (!domainAllowed) {
+      const domains = await EmailDomain.all();
+      req.flash('error', `Ese dominio de correo no está permitido. Dominios aceptados: ${domains.map((d) => d.domain).join(', ')}.`);
+      return res.redirect('/admin/admins');
+    }
+
+    const { id: newAdminId, confirmationToken } = await Admin.create({
       username,
       password,
+      email: cleanEmail,
       full_name,
       can_manage_admins: can_manage_admins === 'on',
     });
+
+    const confirmUrl = `${baseUrl(req)}/admin/confirm-email/${confirmationToken}`;
+    const { subject, html, text } = confirmationEmail({ schoolName: SCHOOL_NAME(), fullName: full_name, confirmUrl });
+    await sendMail({ to: cleanEmail, subject, html, text });
 
     await ActivityLog.log({
       adminId: req.session.admin.id,
@@ -46,13 +76,19 @@ exports.create = async (req, res) => {
       actionType: 'admin_created',
       entityId: newAdminId,
       entityLabel: username,
+      details: `Correo: ${cleanEmail} — pendiente de confirmación (vence en 24h)`,
     });
 
-    req.flash('success', `Se creó la cuenta "${username}" correctamente.`);
+    req.flash('success', `Se creó la cuenta "${username}" — le enviamos un correo a ${cleanEmail} para confirmarla. Tiene 24 horas antes de que la cuenta se elimine sola si no confirma.`);
     res.redirect('/admin/admins');
   } catch (err) {
     console.error(err);
-    const msg = err.code === 'ER_DUP_ENTRY' ? 'Ya existe una cuenta con ese nombre de usuario.' : 'No se pudo crear la cuenta.';
+    let msg = 'No se pudo crear la cuenta.';
+    if (err.code === 'ER_DUP_ENTRY') {
+      msg = (err.sqlMessage || '').includes('email')
+        ? 'Ya existe una cuenta registrada con ese correo.'
+        : 'Ya existe una cuenta con ese nombre de usuario.';
+    }
     req.flash('error', msg);
     res.redirect('/admin/admins');
   }

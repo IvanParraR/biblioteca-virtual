@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+<%- include('../../partials/head') %>
+<body>
+  <%- include('../../partials/nav-student') %>
+  <%- include('../../partials/nav-student-account') %>
+
+  <div class="container" style="padding-bottom:60px;">
+    <% if (successMsg && successMsg.length) { %><div class="alert alert-success"><%= successMsg[0] %></div><% } %>
+    <% if (errorMsg && errorMsg.length) { %><div class="alert alert-error"><%= errorMsg[0] %></div><% } %>
+
+    <h1 style="margin-bottom:6px;">Mi lista de espera</h1>
+    <p style="color:var(--ink-600); margin-bottom:22px;">Libros sin copias disponibles que estás esperando, en el orden en que te anotaste.</p>
+
+    <% if (entries.length > 0) { %>
+      <div class="table-wrap">
+        <table class="admin-table">
+          <thead><tr><th>Libro</th><th>Desde</th><th>Estado</th><th>Acciones</th></tr></thead>
+          <tbody>
+            <% entries.forEach(e => { %>
+              <tr>
+                <td data-label="Libro"><a href="/libro/<%= e.book_id %>"><%= e.book_title %></a></td>
+                <td data-label="Desde"><%= new Date(e.requested_at).toLocaleDateString('es-CO') %></td>
+                <td data-label="Estado">
+                  <% if (e.notified_at) { %>
+                    <span class="badge badge-a_tiempo">¡Te toca! Hasta <%= new Date(e.hold_expires_at).toLocaleString('es-CO') %></span>
+                  <% } else { %>
+                    <span class="badge badge-solo_biblioteca">Esperando turno</span>
+                  <% } %>
+                </td>
+                <td data-label="Acciones">
+                  <form action="/mi-cuenta/espera/<%= e.id %>/cancelar" method="POST" style="margin:0;">
+                    <button type="submit" class="btn btn-outline btn-sm">Salir de la lista</button>
+                  </form>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <p style="color:var(--ink-600);">No estás en ninguna lista de espera ahora mismo.</p>
+    <% } %>
+  </div>
+
+  <%- include('../../partials/footer') %>
+</body>
+</html>

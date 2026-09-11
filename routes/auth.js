@@ -14,4 +14,11 @@ router.post('/forgot-password', redirectIfLoggedIn, passwordRecoveryController.s
 router.post('/forgot-password/verify', redirectIfLoggedIn, passwordRecoveryController.submitAnswer);
 router.post('/forgot-password/reset', redirectIfLoggedIn, passwordRecoveryController.submitReset);
 
+// Recuperación de contraseña por correo (contraseña temporal) — no requiere sesión
+router.get('/forgot-password-email', redirectIfLoggedIn, passwordRecoveryController.showEmailForm);
+router.post('/forgot-password-email', redirectIfLoggedIn, passwordRecoveryController.submitEmailRequest);
+
+// Confirmación de cuenta nueva (enlace enviado por correo) — no requiere sesión
+router.get('/confirm-email/:token', authController.confirmEmail);
+
 module.exports = router;

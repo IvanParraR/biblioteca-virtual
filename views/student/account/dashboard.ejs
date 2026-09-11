@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<%- include('../../partials/head') %>
+<body>
+  <%- include('../../partials/nav-student') %>
+  <%- include('../../partials/nav-student-account') %>
+
+  <div class="container" style="padding-bottom:60px;">
+    <% if (successMsg && successMsg.length) { %><div class="alert alert-success"><%= successMsg[0] %></div><% } %>
+    <% if (errorMsg && errorMsg.length) { %><div class="alert alert-error"><%= errorMsg[0] %></div><% } %>
+
+    <h1 style="margin-bottom:4px;">Hola, <%= student.full_name %></h1>
+    <p style="color:var(--ink-600); margin-bottom:24px;">
+      <%= student.email %><% if (student.student_code) { %> · Código <%= student.student_code %><% } %><% if (student.grade) { %> · <%= student.grade %><% } %>
+    </p>
+
+    <div class="stat-grid" style="margin-bottom:28px;">
+      <div class="stat-card">
+        <div class="stat-label">Préstamos activos</div>
+        <div class="stat-value"><%= stats.active_loans %></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Préstamos totales</div>
+        <div class="stat-value"><%= stats.total_loans %></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Este último mes</div>
+        <div class="stat-value"><%= stats.loans_last_month %></div>
+      </div>
+      <div class="stat-card <%= stats.currently_overdue > 0 ? 'accent' : '' %>">
+        <div class="stat-label">Atrasados ahora</div>
+        <div class="stat-value"><%= stats.currently_overdue %></div>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+      <a href="/mi-cuenta/prestamos" class="btn btn-gold">Ver mis préstamos</a>
+      <a href="/catalogo" class="btn btn-outline">Ir al catálogo</a>
+    </div>
+  </div>
+
+  <%- include('../../partials/footer') %>
+</body>
+</html>

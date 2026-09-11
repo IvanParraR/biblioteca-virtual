@@ -33,6 +33,7 @@ const DEFAULTS = {
   social_whatsapp: '',
   maintenance_mode: false,
   loan_days_default: 7,
+  max_active_loans: 3,
 };
 
 let cache = { ...DEFAULTS };
@@ -45,7 +46,7 @@ const FIELDS = [
   'welcome_title', 'welcome_message',
   'address', 'city', 'phone', 'email', 'hours',
   'social_facebook', 'social_instagram', 'social_twitter', 'social_whatsapp',
-  'maintenance_mode', 'loan_days_default',
+  'maintenance_mode', 'loan_days_default', 'max_active_loans',
 ];
 
 const Settings = {

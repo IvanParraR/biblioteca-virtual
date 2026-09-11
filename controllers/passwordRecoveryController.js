@@ -1,6 +1,11 @@
 const Settings = require('../models/Settings');
 const Admin = require('../models/Admin');
 const LoginLockout = require('../models/LoginLockout');
+const ActivityLog = require('../models/ActivityLog');
+const EmailConfirmation = require('../models/EmailConfirmation');
+const { sendMail } = require('../config/mailer');
+const { temporaryPasswordEmail } = require('../utils/emailTemplates');
+const { isPasswordValid, passwordHint } = require('../utils/passwordPolicy');
 
 const SCHOOL_NAME = () => Settings.get().school_name;
 
@@ -113,12 +118,12 @@ exports.submitReset = async (req, res) => {
     return res.redirect('/admin/forgot-password');
   }
 
-  if (!password || password.length < 8) {
+  if (!password || !isPasswordValid(password)) {
     return res.render('admin/forgot-password-reset', {
       pageTitle: 'Nueva contraseña',
       schoolName: SCHOOL_NAME(),
       username,
-      formErrorMsg: 'La contraseña debe tener al menos 8 caracteres.',
+      formErrorMsg: `Contraseña insegura. ${passwordHint()}`,
     });
   }
 
@@ -147,5 +152,62 @@ exports.submitReset = async (req, res) => {
     console.error(err);
     req.flash('error', 'No se pudo actualizar la contraseña.');
     res.redirect('/admin/forgot-password');
+  }
+};
+
+// ============================================================
+// Alternativa: recibir una contraseña temporal por correo, en vez
+// de responder la pregunta de seguridad. Funciona con el nombre de
+// usuario o el correo de la cuenta.
+//
+// Por seguridad, la respuesta es SIEMPRE el mismo mensaje genérico
+// exista o no la cuenta — así nadie puede usar este formulario para
+// averiguar qué usuarios o correos están registrados.
+// ============================================================
+const GENERIC_EMAIL_SENT_MSG = 'Si esa cuenta existe y tiene un correo confirmado, le enviamos una contraseña temporal. Revisa la bandeja de entrada (y spam) en unos minutos.';
+
+exports.showEmailForm = (req, res) => {
+  res.render('admin/forgot-password-email', {
+    pageTitle: 'Recuperar contraseña por correo',
+    schoolName: SCHOOL_NAME(),
+  });
+};
+
+exports.submitEmailRequest = async (req, res) => {
+  const { identifier } = req.body;
+  try {
+    const admin = await Admin.findByUsernameOrEmail((identifier || '').trim());
+
+    // Solo se envía si la cuenta existe, tiene correo, Y ese correo
+    // ya está confirmado (una cuenta pendiente de confirmar todavía
+    // no debería poder resetear su contraseña por esta vía).
+    if (admin && admin.email && !EmailConfirmation.isPendingConfirmation(admin)) {
+      const tempPassword = await Admin.assignTemporaryPassword(admin.id);
+      const { subject, html, text } = temporaryPasswordEmail({
+        schoolName: SCHOOL_NAME(),
+        fullName: admin.full_name,
+        username: admin.username,
+        tempPassword,
+        loginUrl: `${process.env.APP_URL || `${req.protocol}://${req.get('host')}`}/admin/login`,
+      });
+      await sendMail({ to: admin.email, subject, html, text });
+
+      await ActivityLog.log({
+        adminId: admin.id,
+        adminUsername: admin.username,
+        actionType: 'admin_temp_password_assigned',
+        entityId: admin.id,
+        entityLabel: `${admin.username} (autoservicio por correo)`,
+      });
+    }
+
+    req.flash('success', GENERIC_EMAIL_SENT_MSG);
+    res.redirect('/admin/login');
+  } catch (err) {
+    console.error(err);
+    // Igual mensaje genérico también en caso de error, por la misma
+    // razón (no revelar si la cuenta existe).
+    req.flash('success', GENERIC_EMAIL_SENT_MSG);
+    res.redirect('/admin/login');
   }
 };

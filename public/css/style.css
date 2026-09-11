@@ -525,7 +525,8 @@ img { max-width: 100%; display: block; }
 .field { display: flex; flex-direction: column; gap: 5px; }
 .field label { font-size: 0.76rem; font-weight: 600; color: var(--ink-600); text-transform: uppercase; letter-spacing: 0.03em; }
 
-.field select, .field input[type="text"], .field input[type="number"], .field input[type="password"] {
+.field select, .field input[type="text"], .field input[type="number"], .field input[type="password"],
+.field input[type="email"], .field input[type="tel"], .field input[type="date"], .field input[type="search"], .field input[type="url"] {
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   padding: 10px 12px;
@@ -535,6 +536,19 @@ img { max-width: 100%; display: block; }
   color: var(--ink-900);
 }
 .field select:focus, .field input:focus { outline: none; border-color: var(--forest-600); }
+
+/* El navegador fuerza su propio fondo (blanco/azul) en campos con
+   autocompletado (usuario/contraseña guardados, o el autofill de
+   direcciones/correos de Chrome) — sin esto, ese fondo se ve encima
+   del tema oscuro sin importar el color que pongamos arriba. */
+.field input:-webkit-autofill,
+.field input:-webkit-autofill:hover,
+.field input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--ink-900);
+  -webkit-box-shadow: 0 0 0px 1000px var(--paper) inset;
+  box-shadow: 0 0 0px 1000px var(--paper) inset;
+  transition: background-color 9999s ease-in-out 0s;
+}
 
 .btn {
   display: inline-flex;

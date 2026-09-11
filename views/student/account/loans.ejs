@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<%- include('../../partials/head') %>
+<body>
+  <%- include('../../partials/nav-student') %>
+  <%- include('../../partials/nav-student-account') %>
+
+  <div class="container" style="padding-bottom:60px;">
+    <% if (successMsg && successMsg.length) { %><div class="alert alert-success"><%= successMsg[0] %></div><% } %>
+    <% if (errorMsg && errorMsg.length) { %><div class="alert alert-error"><%= errorMsg[0] %></div><% } %>
+
+    <h1 style="margin-bottom:18px;">Mis préstamos</h1>
+
+    <h2 style="font-size:1.1rem; margin-bottom:10px;">Activos</h2>
+    <% if (active.length > 0) { %>
+      <div class="table-wrap" style="margin-bottom:32px;">
+        <table class="admin-table">
+          <thead><tr><th>Libro</th><th>Prestado el</th><th>Fecha límite</th><th>Estado</th></tr></thead>
+          <tbody>
+            <% active.forEach(l => { %>
+              <tr>
+                <td data-label="Libro"><%= l.book_title %></td>
+                <td data-label="Prestado el"><%= new Date(l.loaned_at).toLocaleDateString('es-CO') %></td>
+                <td data-label="Fecha límite"><%= new Date(l.due_date).toLocaleDateString('es-CO') %></td>
+                <td data-label="Estado">
+                  <% if (l.is_overdue) { %><span class="badge badge-atrasado">Atrasado</span>
+                  <% } else { %><span class="badge badge-a_tiempo">A tiempo</span><% } %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <p style="color:var(--ink-600); margin-bottom:32px;">No tienes préstamos activos ahora mismo.</p>
+    <% } %>
+
+    <h2 style="font-size:1.1rem; margin-bottom:10px;">Historial</h2>
+    <% if (history.length > 0) { %>
+      <div class="table-wrap">
+        <table class="admin-table">
+          <thead><tr><th>Libro</th><th>Prestado el</th><th>Fecha límite</th><th>Devuelto el</th><th>Estado</th></tr></thead>
+          <tbody>
+            <% history.forEach(l => { %>
+              <tr>
+                <td data-label="Libro"><%= l.book_title %></td>
+                <td data-label="Prestado el"><%= new Date(l.loaned_at).toLocaleDateString('es-CO') %></td>
+                <td data-label="Fecha límite"><%= new Date(l.due_date).toLocaleDateString('es-CO') %></td>
+                <td data-label="Devuelto el"><%= l.returned_at ? new Date(l.returned_at).toLocaleDateString('es-CO') : '—' %></td>
+                <td data-label="Estado">
+                  <% if (l.returned_at) { %><span class="badge badge-devuelto">Devuelto</span>
+                  <% } else if (l.is_overdue) { %><span class="badge badge-atrasado">Atrasado</span>
+                  <% } else { %><span class="badge badge-a_tiempo">A tiempo</span><% } %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <p style="color:var(--ink-600);">Todavía no tienes historial de préstamos.</p>
+    <% } %>
+  </div>
+
+  <%- include('../../partials/footer') %>
+</body>
+</html>

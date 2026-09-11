@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<%- include('../../partials/head') %>
+<body>
+  <%- include('../../partials/nav-student') %>
+  <%- include('../../partials/nav-student-account') %>
+
+  <div class="container" style="padding-bottom:60px; max-width:600px;">
+    <% if (successMsg && successMsg.length) { %><div class="alert alert-success"><%= successMsg[0] %></div><% } %>
+    <% if (errorMsg && errorMsg.length) { %><div class="alert alert-error"><%= errorMsg[0] %></div><% } %>
+
+    <h1 style="margin-bottom:18px;">Editar mi perfil</h1>
+
+    <div class="form-card">
+      <form action="/mi-cuenta/editar" method="POST">
+        <div class="form-grid">
+          <div class="field field-full">
+            <label for="full_name">Nombre completo *</label>
+            <input type="text" id="full_name" name="full_name" required value="<%= student.full_name %>">
+          </div>
+          <div class="field">
+            <label for="grade">Grado</label>
+            <select id="grade" name="grade">
+              <option value="">Sin especificar</option>
+              <% grades.forEach(g => { %><option value="<%= g %>" <%= student.grade === g ? 'selected' : '' %>><%= g %></option><% }) %>
+            </select>
+          </div>
+          <div class="field">
+            <label for="phone">Teléfono (opcional)</label>
+            <input type="tel" id="phone" name="phone" pattern="^\+?[0-9\s\-()]{7,20}$" placeholder="Ej. +57 300 123 4567" value="<%= student.phone || '' %>">
+          </div>
+          <div class="field field-full">
+            <label>Correo</label>
+            <input type="text" value="<%= student.email %>" disabled style="opacity:0.6;">
+            <span class="field-hint">El correo no se puede cambiar desde aquí — contacta a la biblioteca si necesitas actualizarlo.</span>
+          </div>
+          <div class="field field-full checkbox-field">
+            <input type="checkbox" id="notify_due_reminder" name="notify_due_reminder" <%= student.notify_due_reminder ? 'checked' : '' %>>
+            <label for="notify_due_reminder" style="text-transform:none;">Avisarme por correo cuando un préstamo esté por vencer</label>
+          </div>
+        </div>
+        <p class="field-hint" style="margin-top:8px;">El comprobante de préstamo y el aviso de lista de espera siempre se envían — solo este recordatorio se puede desactivar.</p>
+        <button type="submit" class="btn btn-gold" style="margin-top:16px;">Guardar cambios</button>
+      </form>
+    </div>
+  </div>
+
+  <%- include('../../partials/footer') %>
+</body>
+</html>

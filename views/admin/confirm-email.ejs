@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="es">
+<%- include('../partials/head') %>
+<body>
+  <div class="login-shell">
+    <div class="login-card">
+      <div class="brand-mark">B</div>
+      <% if (success) { %>
+        <h1>¡Cuenta confirmada!</h1>
+        <p class="login-sub">La cuenta "<strong><%= username %></strong>" quedó activa. Ya puedes iniciar sesión.</p>
+        <div style="margin-top:18px;">
+          <a href="/admin/login" class="btn btn-primary btn-block">Iniciar sesión</a>
+        </div>
+      <% } else { %>
+        <h1>Enlace no válido</h1>
+        <p class="login-sub">Este enlace de confirmación ya no sirve — puede que ya se haya usado, o que hayan pasado más de 24 horas desde que se creó la cuenta (en ese caso, se elimina automáticamente).</p>
+        <p style="text-align:center; font-size:0.85rem; color:var(--ink-400); margin-top:10px;">
+          Pide a un administrador con permiso de gestión que cree la cuenta de nuevo.
+        </p>
+        <div style="margin-top:18px;">
+          <a href="/admin/login" class="btn btn-outline btn-block">Volver a iniciar sesión</a>
+        </div>
+      <% } %>
+    </div>
+  </div>
+</body>
+</html>

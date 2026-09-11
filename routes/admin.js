@@ -7,6 +7,8 @@ const accountController = require('../controllers/accountController');
 const activityLogController = require('../controllers/activityLogController');
 const exportController = require('../controllers/exportController');
 const settingsController = require('../controllers/settingsController');
+const emailDomainController = require('../controllers/emailDomainController');
+const studentManagementController = require('../controllers/studentManagementController');
 const loanController = require('../controllers/loanController');
 const { requireAdmin, requireAdminManager, checkForcedPasswordChange } = require('../middleware/auth');
 const { coverUpload, processCoverImage, csvUpload, logoUpload, processLogoImage } = require('../middleware/upload');
@@ -69,6 +71,14 @@ router.post('/admins/:id/delete', requireAdminManager, adminManagementController
 // Configuración del sitio — solo cuentas con permiso de gestión
 router.get('/settings', requireAdminManager, settingsController.show);
 router.post('/settings', requireAdminManager, logoUpload.single('logo'), processLogoImage, settingsController.update);
+router.post('/settings/email-domains', requireAdminManager, emailDomainController.add);
+router.post('/settings/email-domains/:id/delete', requireAdminManager, emailDomainController.delete);
+router.post('/settings/student-email-domains', requireAdminManager, emailDomainController.addStudentDomain);
+router.post('/settings/student-email-domains/:id/delete', requireAdminManager, emailDomainController.deleteStudentDomain);
+
+router.get('/students', studentManagementController.list);
+router.get('/students/:id', studentManagementController.show);
+router.post('/students/:id/status', requireAdminManager, studentManagementController.setStatus);
 
 // Historial de actividad — visible para cualquier administrador
 router.get('/activity-log', activityLogController.list);

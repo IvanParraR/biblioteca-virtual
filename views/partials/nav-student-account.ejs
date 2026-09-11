@@ -1,0 +1,12 @@
+<div class="container" style="padding-top:24px;">
+  <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:22px; border-bottom:1px solid var(--forest-100); padding-bottom:14px;">
+    <a href="/mi-cuenta" class="btn <%= currentPath === '/mi-cuenta' ? 'btn-primary' : 'btn-outline' %> btn-sm">Mi cuenta</a>
+    <a href="/mi-cuenta/prestamos" class="btn <%= currentPath === '/mi-cuenta/prestamos' ? 'btn-primary' : 'btn-outline' %> btn-sm">Mis préstamos</a>
+    <a href="/mi-cuenta/espera" class="btn <%= currentPath === '/mi-cuenta/espera' ? 'btn-primary' : 'btn-outline' %> btn-sm">Lista de espera</a>
+    <a href="/mi-cuenta/editar" class="btn <%= currentPath === '/mi-cuenta/editar' ? 'btn-primary' : 'btn-outline' %> btn-sm">Editar perfil</a>
+    <a href="/mi-cuenta/contrasena" class="btn <%= currentPath === '/mi-cuenta/contrasena' ? 'btn-primary' : 'btn-outline' %> btn-sm">Contraseña</a>
+    <form action="/cerrar-sesion" method="POST" style="margin:0;">
+      <button type="submit" class="btn btn-outline btn-sm">Cerrar sesión</button>
+    </form>
+  </div>
+</div>

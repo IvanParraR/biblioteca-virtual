@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<%- include('../partials/head') %>
+<body>
+  <%- include('../partials/nav-admin') %>
+
+  <div class="admin-page-head">
+    <div>
+      <h1 style="margin-bottom:2px;"><%= student.full_name %></h1>
+      <p style="color:var(--ink-600); font-size:0.9rem;">
+        <%= student.student_code || 'Sin código' %><% if (student.grade) { %> · <%= student.grade %><% } %>
+        · Vinculado desde <%= new Date(student.created_at).toLocaleDateString('es-CO') %>
+      </p>
+    </div>
+    <a href="/admin/students" class="btn btn-outline">← Volver a estudiantes</a>
+  </div>
+
+  <% if (successMsg && successMsg.length) { %><div class="alert alert-success"><%= successMsg[0] %></div><% } %>
+  <% if (errorMsg && errorMsg.length) { %><div class="alert alert-error"><%= errorMsg[0] %></div><% } %>
+
+  <div class="form-card" style="margin-bottom:24px;">
+    <h2 style="font-size:1.05rem; margin-bottom:14px;">Datos de contacto</h2>
+    <div class="info-grid">
+      <div class="info-item"><div class="info-label">Correo</div><div class="info-value"><%= student.email || '—' %></div></div>
+      <div class="info-item"><div class="info-label">Teléfono</div><div class="info-value"><%= student.phone || '—' %></div></div>
+      <div class="info-item">
+        <div class="info-label">Estado de la cuenta</div>
+        <div class="info-value">
+          <% if (!student.email) { %>Sin cuenta (solo directorio)
+          <% } else if (student.pending_confirmation) { %>Pendiente de confirmar
+          <% } else { %>Confirmada<% } %>
+        </div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Recordatorio de vencimiento</div>
+        <div class="info-value"><%= student.notify_due_reminder ? 'Activado' : 'Desactivado' %></div>
+      </div>
+    </div>
+
+    <% if (student.email) { %>
+      <form action="/admin/students/<%= student.id %>/status" method="POST" style="margin-top:18px;"
+        onsubmit="return confirm('<%= student.status === 'inactive' ? '¿Reactivar esta cuenta?' : '¿Desactivar esta cuenta? No podrá iniciar sesión ni prestar libros hasta que se reactive.' %>');">
+        <input type="hidden" name="status" value="<%= student.status === 'inactive' ? 'active' : 'inactive' %>">
+        <button type="submit" class="btn <%= student.status === 'inactive' ? 'btn-primary' : 'btn-danger' %> btn-sm">
+          <%= student.status === 'inactive' ? 'Reactivar cuenta' : 'Desactivar cuenta' %>
+        </button>
+      </form>
+      <p class="field-hint" style="margin-top:8px;">Desactivar NO borra su historial de préstamos — solo bloquea que inicie sesión o pida préstamos nuevos.</p>
+    <% } %>
+  </div>
+
+  <div class="stat-grid" style="margin-bottom:28px;">
+    <div class="stat-card">
+      <div class="stat-label">Préstamos totales</div>
+      <div class="stat-value"><%= stats.total_loans %></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Último mes</div>
+      <div class="stat-value"><%= stats.loans_last_month %></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Activos ahora</div>
+      <div class="stat-value"><%= stats.active_loans %></div>
+    </div>
+    <div class="stat-card <%= stats.currently_overdue > 0 ? 'accent' : '' %>">
+      <div class="stat-label">Atrasados ahora</div>
+      <div class="stat-value"><%= stats.currently_overdue %></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Atrasos históricos</div>
+      <div class="stat-value"><%= stats.times_overdue_historically %></div>
+    </div>
+  </div>
+
+  <h2 style="font-size:1.1rem; margin-bottom:10px;">Historial de préstamos</h2>
+  <% if (history.length > 0) { %>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead><tr><th>Libro</th><th>Prestado el</th><th>Fecha límite</th><th>Devuelto el</th><th>Estado</th></tr></thead>
+        <tbody>
+          <% history.forEach(l => { %>
+            <tr>
+              <td data-label="Libro"><%= l.book_title %></td>
+              <td data-label="Prestado el"><%= new Date(l.loaned_at).toLocaleDateString('es-CO') %></td>
+              <td data-label="Fecha límite"><%= new Date(l.due_date).toLocaleDateString('es-CO') %></td>
+              <td data-label="Devuelto el"><%= l.returned_at ? new Date(l.returned_at).toLocaleDateString('es-CO') : '—' %></td>
+              <td data-label="Estado">
+                <% if (l.returned_at) { %><span class="badge badge-devuelto">Devuelto</span>
+                <% } else if (l.is_overdue) { %><span class="badge badge-atrasado">Atrasado</span>
+                <% } else { %><span class="badge badge-a_tiempo">A tiempo</span><% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } else { %>
+    <p style="color:var(--ink-600);">Sin historial de préstamos todavía.</p>
+  <% } %>
+
+  <%- include('../partials/footer-admin') %>
+</body>
+</html>

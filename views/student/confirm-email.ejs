@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="es">
+<%- include('../partials/head') %>
+<body>
+  <div class="login-shell">
+    <div class="login-card">
+      <div class="brand-mark">B</div>
+      <% if (success) { %>
+        <h1>¡Cuenta confirmada!</h1>
+        <p class="login-sub">Listo<%= fullName ? `, ${fullName}` : '' %> — ya puedes iniciar sesión y empezar a prestar libros.</p>
+        <div style="margin-top:18px;">
+          <a href="/iniciar-sesion" class="btn btn-primary btn-block">Iniciar sesión</a>
+        </div>
+      <% } else { %>
+        <h1>Enlace no válido</h1>
+        <p class="login-sub">Este enlace ya no sirve — puede que ya se haya usado, o que hayan pasado más de 24 horas desde el registro (en ese caso, la cuenta se elimina sola).</p>
+        <div style="margin-top:18px;">
+          <a href="/registro" class="btn btn-outline btn-block">Registrarme de nuevo</a>
+        </div>
+      <% } %>
+    </div>
+  </div>
+</body>
+</html>

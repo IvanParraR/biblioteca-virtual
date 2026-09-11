@@ -17,10 +17,12 @@
 // ============================================================
 const { pool } = require('../config/db');
 const Settings = require('./Settings');
+const Waitlist = require('./Waitlist');
 
 const LOAN_DAYS_DEFAULT = 7; // respaldo si Settings aún no cargó o no tiene el campo
 const MAX_ACTIVE_LOANS_PER_STUDENT = 3;
 const MAX_RENEWALS = 1; // una sola renovación por préstamo
+const REMINDER_DAYS_BEFORE = 2; // aviso de vencimiento, 2 días antes
 
 // Errores de regla de negocio — su .message es seguro para
 // mostrarle directamente al admin (a diferencia de un error de
@@ -30,6 +32,11 @@ class LoanError extends Error {}
 function loanDaysDefault() {
   const configured = Settings.get().loan_days_default;
   return Number.isInteger(configured) && configured > 0 ? configured : LOAN_DAYS_DEFAULT;
+}
+
+function maxActiveLoans() {
+  const configured = Settings.get().max_active_loans;
+  return Number.isInteger(configured) && configured > 0 ? configured : MAX_ACTIVE_LOANS_PER_STUDENT;
 }
 
 function addDays(date, days) {
@@ -47,6 +54,7 @@ const SELECT_BASE = `
     l.*,
     b.title AS book_title, b.author AS book_author, b.cover_url AS book_cover_url,
     s.full_name AS student_name, s.student_code AS student_code, s.grade AS student_grade,
+    s.email AS student_email,
     (l.returned_at IS NULL AND l.due_date < CURDATE()) AS is_overdue
   FROM loans l
   JOIN books b ON l.book_id = b.id
@@ -57,9 +65,11 @@ const Loan = {
   LOAN_DAYS_DEFAULT,
   MAX_ACTIVE_LOANS_PER_STUDENT,
   MAX_RENEWALS,
+  REMINDER_DAYS_BEFORE,
   LoanError,
   defaultDueDate,
   loanDaysDefault,
+  maxActiveLoans,
 
   async findById(id) {
     const [rows] = await pool.query(`${SELECT_BASE} WHERE l.id = ?`, [id]);
@@ -104,17 +114,42 @@ const Loan = {
         throw new LoanError('No quedan copias disponibles de ese libro.');
       }
 
+      // Si hay copias libres pero TODAS (o más) están comprometidas
+      // con cupos reservados de la lista de espera de OTROS
+      // estudiantes, este préstamo tiene que esperar — aunque
+      // available_copies sea mayor que cero. Si sobran copias más
+      // allá de lo reservado, sí se deja pasar.
+      const activeHoldCount = await Waitlist.countActiveHoldsForOther(bookId, studentId, conn);
+      if (Number(book.available_copies) <= activeHoldCount) {
+        const nextHold = await Waitlist.activeHoldForOther(bookId, studentId, conn);
+        const holdUntil = nextHold ? new Date(nextHold.hold_expires_at).toLocaleString('es-CO') : 'pronto';
+        throw new LoanError(`Ese libro está reservado temporalmente para otro(s) estudiante(s) de la lista de espera hasta ${holdUntil}.`);
+      }
+
       const [studentRows] = await conn.query('SELECT id, full_name FROM students WHERE id = ?', [studentId]);
       const student = studentRows[0];
       if (!student) throw new LoanError('El estudiante seleccionado no existe.');
 
+      // Un mismo estudiante no puede tener dos préstamos activos del
+      // MISMO libro a la vez (ni aunque queden copias de sobra) —
+      // sin este chequeo, un estudiante de autoservicio podía
+      // "prestarse" el mismo título una y otra vez.
+      const [dupRows] = await conn.query(
+        'SELECT id FROM loans WHERE student_id = ? AND book_id = ? AND returned_at IS NULL LIMIT 1',
+        [studentId, bookId]
+      );
+      if (dupRows.length > 0) {
+        throw new LoanError(`${student.full_name} ya tiene un préstamo activo de "${book.title}" — no se puede prestar dos veces el mismo libro a la vez.`);
+      }
+
+      const effectiveMax = maxActiveLoans();
       const [[{ activeCount }]] = await conn.query(
         'SELECT COUNT(*) AS activeCount FROM loans WHERE student_id = ? AND returned_at IS NULL FOR UPDATE',
         [studentId]
       );
-      if (activeCount >= MAX_ACTIVE_LOANS_PER_STUDENT) {
+      if (activeCount >= effectiveMax) {
         throw new LoanError(
-          `${student.full_name} ya tiene ${MAX_ACTIVE_LOANS_PER_STUDENT} préstamos activos — no puede llevar otro hasta devolver alguno.`
+          `${student.full_name} ya tiene ${effectiveMax} préstamo${effectiveMax === 1 ? '' : 's'} activo${effectiveMax === 1 ? '' : 's'} — no puede llevar otro hasta devolver alguno.`
         );
       }
 
@@ -137,6 +172,10 @@ const Loan = {
         'UPDATE books SET available_copies = GREATEST(0, available_copies - 1) WHERE id = ?',
         [bookId]
       );
+
+      // Si este estudiante tenía un cupo reservado por la lista de
+      // espera para este libro, este préstamo lo cumple.
+      await Waitlist.fulfillIfHolding(bookId, studentId, conn);
 
       await conn.commit();
       return result.insertId;
@@ -165,7 +204,16 @@ const Loan = {
       );
 
       await conn.commit();
-      return loan;
+
+      // Se libera una copia — si alguien está esperando este libro,
+      // se le avisa (esto vive fuera de la transacción a propósito:
+      // ya se confirmó la devolución pase lo que pase con la cola).
+      // reconcileForBook avisa a tantas personas como cupos haya
+      // libres de verdad, no solo a una. El controlador es quien
+      // manda los correos con este dato.
+      const waitlistNotified = await Waitlist.reconcileForBook(loan.book_id);
+
+      return { ...loan, waitlistNotified };
     } catch (err) {
       await conn.rollback();
       throw err;
@@ -295,6 +343,45 @@ const Loan = {
       active: Number(row.active) || 0,
       overdue: Number(row.overdue) || 0,
     };
+  },
+
+  // Préstamos que vencen en exactamente REMINDER_DAYS_BEFORE días,
+  // que todavía no se han avisado, y cuyo estudiante tiene el
+  // recordatorio activado y correo confirmado. Se llama
+  // periódicamente desde app.js (ver utils/loanNotifications.js).
+  async findDueForReminder() {
+    const [rows] = await pool.query(
+      `${SELECT_BASE}
+       WHERE l.returned_at IS NULL
+         AND l.reminder_sent_at IS NULL
+         AND l.due_date = DATE_ADD(CURDATE(), INTERVAL ? DAY)
+         AND s.email IS NOT NULL AND s.email_confirmed_at IS NOT NULL
+         AND s.notify_due_reminder = 1`,
+      [REMINDER_DAYS_BEFORE]
+    );
+    return rows;
+  },
+
+  async markReminderSent(id) {
+    await pool.query('UPDATE loans SET reminder_sent_at = NOW() WHERE id = ?', [id]);
+  },
+
+  // Préstamos activos y su historial para la cuenta del propio
+  // estudiante ("mis préstamos").
+  async activeForStudent(studentId) {
+    const [rows] = await pool.query(
+      `${SELECT_BASE} WHERE l.student_id = ? AND l.returned_at IS NULL ORDER BY l.due_date ASC`,
+      [studentId]
+    );
+    return rows;
+  },
+
+  async historyForStudent(studentId) {
+    const [rows] = await pool.query(
+      `${SELECT_BASE} WHERE l.student_id = ? ORDER BY l.loaned_at DESC`,
+      [studentId]
+    );
+    return rows;
   },
 };
 

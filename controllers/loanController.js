@@ -3,8 +3,13 @@ const Book = require('../models/Book');
 const Student = require('../models/Student');
 const ActivityLog = require('../models/ActivityLog');
 const Settings = require('../models/Settings');
+const { sendLoanConfirmation, sendWaitlistTurnNotification } = require('../utils/loanNotifications');
 
 const SCHOOL_NAME = () => Settings.get().school_name;
+
+function baseUrl(req) {
+  return process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+}
 
 exports.list = async (req, res) => {
   try {
@@ -143,6 +148,11 @@ exports.create = async (req, res) => {
     });
 
     req.flash('success', `Préstamo registrado: "${book ? book.title : ''}" para ${loan ? loan.student_name : 'el estudiante'}.`);
+
+    // El comprobante nunca bloquea la respuesta al admin — si el
+    // correo falla, el préstamo ya quedó registrado igual.
+    sendLoanConfirmation(loanId, baseUrl(req)).catch((err) => console.warn('No se pudo enviar el comprobante de préstamo:', err.message));
+
     res.redirect('/admin/loans');
   } catch (err) {
     if (err instanceof Loan.LoanError) {
@@ -158,7 +168,7 @@ exports.create = async (req, res) => {
 exports.markReturned = async (req, res) => {
   try {
     const loanBefore = await Loan.findById(req.params.id);
-    await Loan.markReturned(req.params.id, req.session.admin.username);
+    const result = await Loan.markReturned(req.params.id, req.session.admin.username);
 
     await ActivityLog.log({
       adminId: req.session.admin.id,
@@ -167,6 +177,13 @@ exports.markReturned = async (req, res) => {
       entityId: parseInt(req.params.id, 10),
       entityLabel: loanBefore ? `"${loanBefore.book_title}" → ${loanBefore.student_name}` : `préstamo #${req.params.id}`,
     });
+
+    if (result.waitlistNotified && result.waitlistNotified.length > 0) {
+      result.waitlistNotified.forEach((entry) => {
+        sendWaitlistTurnNotification(entry, baseUrl(req))
+          .catch((err) => console.warn('No se pudo avisar a la lista de espera:', err.message));
+      });
+    }
 
     req.flash('success', 'Préstamo marcado como devuelto.');
   } catch (err) {

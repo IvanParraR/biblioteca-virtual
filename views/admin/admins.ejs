@@ -17,12 +17,22 @@
   <div class="table-wrap" style="margin-bottom:32px;">
     <table class="admin-table">
       <thead>
-        <tr><th>Usuario</th><th>Nombre</th><th>Puede gestionar admins</th><th>Pregunta de seguridad</th><th>Creado</th><th>Acciones</th></tr>
+        <tr><th>Usuario</th><th>Correo</th><th>Nombre</th><th>Puede gestionar admins</th><th>Pregunta de seguridad</th><th>Creado</th><th>Acciones</th></tr>
       </thead>
       <tbody>
         <% admins.forEach(a => { %>
           <tr>
             <td data-label="Usuario"><strong><%= a.username %></strong><% if (a.id === admin.id) { %> <span style="color:var(--gold-600); font-size:0.75rem;">(tú)</span><% } %></td>
+            <td data-label="Correo">
+              <% if (a.email) { %>
+                <%= a.email %><br>
+                <span class="badge <%= a.pending_confirmation ? 'badge-prestado' : 'badge-disponible' %>" style="font-size:0.72rem;">
+                  <%= a.pending_confirmation ? 'Pendiente de confirmar' : 'Confirmado' %>
+                </span>
+              <% } else { %>
+                <span style="color:var(--ink-400);">— (cuenta anterior a este sistema)</span>
+              <% } %>
+            </td>
             <td data-label="Nombre"><%= a.full_name || '—' %></td>
             <td data-label="Permiso">
               <span class="badge <%= a.can_manage_admins ? 'badge-disponible' : 'badge-no_disponible' %>">
@@ -66,12 +76,17 @@
           <input type="text" id="username" name="username" required placeholder="Ej. maria.bibliotecaria">
         </div>
         <div class="field">
+          <label for="email">Correo *</label>
+          <input type="email" id="email" name="email" required placeholder="Ej. maria@gmail.com">
+        </div>
+        <div class="field">
           <label for="full_name">Nombre completo</label>
           <input type="text" id="full_name" name="full_name" placeholder="Ej. María Gómez">
         </div>
-        <div class="field field-full">
+        <div class="field">
           <label for="password">Contraseña *</label>
           <input type="password" id="password" name="password" required minlength="8" placeholder="Mínimo 8 caracteres">
+          <span class="field-hint">Con al menos una mayúscula, un número y un carácter especial (ej. !@#$%&*).</span>
         </div>
         <div class="field field-full checkbox-field">
           <input type="checkbox" id="can_manage_admins" name="can_manage_admins">
@@ -79,6 +94,7 @@
         </div>
       </div>
       <p class="field-hint" style="margin-top:8px;">Por defecto, las nuevas cuentas NO pueden crear, editar permisos ni eliminar otras cuentas — solo gestionan el catálogo de libros.</p>
+      <p class="field-hint">Se le enviará un correo de confirmación a la cuenta nueva — tiene 24 horas para confirmarlo antes de que se elimine sola. Solo se aceptan correos de los dominios permitidos (configurables en <a href="/admin/settings" style="color:var(--forest-700); font-weight:600;">Configuración</a>).</p>
       <div style="margin-top:18px;">
         <button type="submit" class="btn btn-gold">Crear cuenta</button>
       </div>

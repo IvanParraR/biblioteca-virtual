@@ -8,7 +8,13 @@ const path = require('path');
 const { testConnection } = require('./config/db');
 const Settings = require('./models/Settings');
 const Palettes = require('./models/Palettes');
+const Admin = require('./models/Admin');
+const Student = require('./models/Student');
+const Waitlist = require('./models/Waitlist');
+const { sendDueReminders, sendWaitlistTurnNotification } = require('./utils/loanNotifications');
 const studentRoutes = require('./routes/student');
+const studentAuthRoutes = require('./routes/studentAuth');
+const studentAccountRoutes = require('./routes/studentAccount');
 const adminRoutes = require('./routes/admin');
 const authRoutes = require('./routes/auth');
 
@@ -60,12 +66,18 @@ app.use((req, res, next) => {
   // insertarse tal cual en <head>.
   res.locals.siteSettings = settings;
   res.locals.paletteCSSOverride = Palettes.cssFor(settings.color_palette);
+  // Para que cualquier vista pública (nav, header) sepa si hay un
+  // estudiante logueado sin que cada controlador lo tenga que pasar
+  // a mano — igual que con schoolNameGlobal arriba.
+  res.locals.student = (req.session && req.session.student) || null;
   next();
 });
 
 // ---------- Rutas ----------
 app.use('/admin', authRoutes);
 app.use('/admin', adminRoutes);
+app.use('/', studentAuthRoutes);
+app.use('/mi-cuenta', studentAccountRoutes);
 app.use('/', studentRoutes);
 
 // ---------- 404 ----------
@@ -88,4 +100,67 @@ app.listen(PORT, async () => {
   console.log(`📚 Biblioteca Virtual corriendo en http://localhost:${PORT}`);
   await testConnection();
   await Settings.load();
+
+  // Limpieza de cuentas de admin creadas con correo que nunca se
+  // confirmaron dentro de las 24 horas. Corre una vez al arrancar y
+  // luego cada 30 minutos — no hace falta un servicio de cron aparte
+  // para algo de este tamaño; el proceso de Node ya queda corriendo
+  // de forma continua en Railway.
+  const cleanupExpiredAdmins = async () => {
+    try {
+      const deleted = await Admin.deleteExpiredPending();
+      if (deleted > 0) {
+        console.log(`🧹 Se eliminaron ${deleted} cuenta(s) de administrador nunca confirmadas (vencidas hace más de 24h).`);
+      }
+    } catch (err) {
+      console.warn('No se pudo correr la limpieza de cuentas pendientes vencidas:', err.message);
+    }
+  };
+
+  // Lo mismo, para cuentas de estudiante nunca confirmadas.
+  const cleanupExpiredStudents = async () => {
+    try {
+      const deleted = await Student.deleteExpiredPending();
+      if (deleted > 0) {
+        console.log(`🧹 Se eliminaron ${deleted} cuenta(s) de estudiante nunca confirmadas (vencidas hace más de 24h).`);
+      }
+    } catch (err) {
+      console.warn('No se pudo correr la limpieza de cuentas de estudiante vencidas:', err.message);
+    }
+  };
+
+  // Recordatorio de vencimiento (2 días antes), a quienes lo tengan
+  // activado en preferencias — ver models/Loan.js -> findDueForReminder.
+  const appUrlForJobs = process.env.APP_URL || `http://localhost:${PORT}`;
+  const runDueReminders = async () => {
+    try {
+      const count = await sendDueReminders(appUrlForJobs);
+      if (count > 0) console.log(`✉️  Se enviaron ${count} recordatorio(s) de vencimiento.`);
+    } catch (err) {
+      console.warn('No se pudo correr el envío de recordatorios de vencimiento:', err.message);
+    }
+  };
+
+  // Cupos de lista de espera avisados cuyo plazo de 48h ya venció —
+  // se le pasa el turno a la siguiente persona en la fila (y se le
+  // avisa por correo).
+  const expireWaitlistHolds = async () => {
+    try {
+      const newlyNotified = await Waitlist.expireStaleHolds();
+      for (const entry of newlyNotified) {
+        await sendWaitlistTurnNotification(entry, appUrlForJobs).catch((err) => console.warn('No se pudo avisar a la lista de espera:', err.message));
+      }
+    } catch (err) {
+      console.warn('No se pudo correr la revisión de cupos de lista de espera:', err.message);
+    }
+  };
+
+  cleanupExpiredAdmins();
+  cleanupExpiredStudents();
+  runDueReminders();
+  expireWaitlistHolds();
+  setInterval(cleanupExpiredAdmins, 30 * 60 * 1000);
+  setInterval(cleanupExpiredStudents, 30 * 60 * 1000);
+  setInterval(runDueReminders, 30 * 60 * 1000);
+  setInterval(expireWaitlistHolds, 30 * 60 * 1000);
 });

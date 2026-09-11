@@ -96,7 +96,7 @@
         </div>
         <div class="field">
           <label for="phone">Teléfono</label>
-          <input type="text" id="phone" name="phone" maxlength="50" value="<%= settings.phone || '' %>" placeholder="Ej. +57 300 123 4567">
+          <input type="tel" id="phone" name="phone" maxlength="20" pattern="^\+?[0-9\s\-()]{7,20}$" value="<%= settings.phone || '' %>" placeholder="Ej. +57 300 123 4567">
         </div>
         <div class="field">
           <label for="email">Correo electrónico</label>
@@ -147,6 +147,10 @@
           <label for="loan_days_default">Días de préstamo por defecto</label>
           <input type="number" id="loan_days_default" name="loan_days_default" min="1" max="90" value="<%= settings.loan_days_default %>" style="max-width:120px;">
         </div>
+        <div class="field">
+          <label for="max_active_loans">Máximo de préstamos activos por estudiante</label>
+          <input type="number" id="max_active_loans" name="max_active_loans" min="1" max="20" value="<%= settings.max_active_loans %>" style="max-width:120px;">
+        </div>
       </div>
     </div>
 
@@ -159,6 +163,58 @@
 
     <button type="submit" class="btn btn-gold">Guardar cambios</button>
   </form>
+
+  <div class="form-card" style="margin-bottom:24px;">
+    <h2 style="font-size:1.05rem; margin-bottom:6px;">7. Dominios de correo permitidos</h2>
+    <p class="field-hint" style="margin-bottom:14px;">Solo se pueden crear cuentas de administrador con un correo de estos dominios. Si el colegio tiene correo institucional, elimina los genéricos y deja solo el suyo. Debe quedar al menos uno.</p>
+
+    <% if (emailDomains && emailDomains.length > 0) { %>
+      <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px;">
+        <% emailDomains.forEach(d => { %>
+          <form action="/admin/settings/email-domains/<%= d.id %>/delete" method="POST" style="margin:0;"
+            onsubmit="return confirm('¿Eliminar el dominio &quot;<%= d.domain %>&quot; de la lista permitida? Ya no se podrán crear cuentas nuevas con ese dominio.');">
+            <button type="submit" class="btn btn-outline btn-sm" title="Eliminar" <%= emailDomains.length <= 1 ? 'disabled' : '' %>>
+              <%= d.domain %> ✕
+            </button>
+          </form>
+        <% }) %>
+      </div>
+    <% } %>
+
+    <form action="/admin/settings/email-domains" method="POST" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+      <div class="field" style="flex:1; min-width:200px;">
+        <label for="domain">Agregar dominio</label>
+        <input type="text" id="domain" name="domain" placeholder="Ej. colegiosanmartin.edu.co">
+      </div>
+      <button type="submit" class="btn btn-primary">Agregar</button>
+    </form>
+  </div>
+
+  <div class="form-card" style="margin-bottom:24px;">
+    <h2 style="font-size:1.05rem; margin-bottom:6px;">8. Dominios de correo permitidos — Estudiantes</h2>
+    <p class="field-hint" style="margin-bottom:14px;">Lista separada de la de administradores — es la principal barrera contra que alguien externo se auto-registre como estudiante. Si el colegio tiene correo institucional para alumnos, déjalo solo a él.</p>
+
+    <% if (studentEmailDomains && studentEmailDomains.length > 0) { %>
+      <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px;">
+        <% studentEmailDomains.forEach(d => { %>
+          <form action="/admin/settings/student-email-domains/<%= d.id %>/delete" method="POST" style="margin:0;"
+            onsubmit="return confirm('¿Eliminar el dominio &quot;<%= d.domain %>&quot; de la lista permitida de estudiantes?');">
+            <button type="submit" class="btn btn-outline btn-sm" title="Eliminar" <%= studentEmailDomains.length <= 1 ? 'disabled' : '' %>>
+              <%= d.domain %> ✕
+            </button>
+          </form>
+        <% }) %>
+      </div>
+    <% } %>
+
+    <form action="/admin/settings/student-email-domains" method="POST" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+      <div class="field" style="flex:1; min-width:200px;">
+        <label for="student_domain">Agregar dominio</label>
+        <input type="text" id="student_domain" name="domain" placeholder="Ej. estudiantes.colegiosanmartin.edu.co">
+      </div>
+      <button type="submit" class="btn btn-primary">Agregar</button>
+    </form>
+  </div>
 
   <%- include('../partials/footer-admin') %>
 </body>

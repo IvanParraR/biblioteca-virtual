@@ -14,8 +14,8 @@
 
       <form action="/admin/login" method="POST">
         <div class="field" style="margin-bottom:14px;">
-          <label for="username">Usuario</label>
-          <input type="text" id="username" name="username" required autofocus placeholder="admin">
+          <label for="username">Usuario o correo</label>
+          <input type="text" id="username" name="username" required autofocus placeholder="admin o tu@correo.com">
         </div>
         <div class="field" style="margin-bottom:22px;">
           <label for="password">Contraseña</label>
@@ -26,6 +26,8 @@
 
       <p style="text-align:center; margin-top:16px; font-size:0.85rem;">
         <a href="/admin/forgot-password" style="color:var(--forest-700); font-weight:600;">¿Olvidaste tu contraseña?</a>
+        ·
+        <a href="/admin/forgot-password-email" style="color:var(--forest-700); font-weight:600;">Recibirla por correo</a>
       </p>
 
       <p style="text-align:center; margin-top:22px; font-size:0.82rem; color:var(--ink-400);">

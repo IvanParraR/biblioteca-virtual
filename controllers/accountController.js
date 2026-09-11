@@ -2,6 +2,7 @@ const Settings = require('../models/Settings');
 const bcrypt = require('bcryptjs');
 const Admin = require('../models/Admin');
 const ActivityLog = require('../models/ActivityLog');
+const { isPasswordValid, passwordHint } = require('../utils/passwordPolicy');
 
 const SCHOOL_NAME = () => Settings.get().school_name;
 
@@ -33,8 +34,8 @@ exports.changePassword = async (req, res) => {
       return res.redirect('/admin/account');
     }
 
-    if (!new_password || new_password.length < 8) {
-      req.flash('error', 'La nueva contraseña debe tener al menos 8 caracteres.');
+    if (!new_password || !isPasswordValid(new_password)) {
+      req.flash('error', `Contraseña insegura. ${passwordHint()}`);
       return res.redirect('/admin/account');
     }
 

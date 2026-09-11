@@ -5,6 +5,8 @@ const Book = require('../models/Book');
 const Category = require('../models/Category');
 const ActivityLog = require('../models/ActivityLog');
 const Loan = require('../models/Loan');
+const Waitlist = require('../models/Waitlist');
+const { sendWaitlistTurnNotification } = require('../utils/loanNotifications');
 
 const SCHOOL_NAME = () => Settings.get().school_name;
 
@@ -220,6 +222,18 @@ exports.updateBook = async (req, res) => {
     });
 
     req.flash('success', `"${title}" se actualizó correctamente.`);
+
+    // Si esta edición dejó más copias disponibles que antes (y
+    // library_only no bloquea el préstamo), puede que alguien en
+    // lista de espera ya tenga cupo — se revisa igual que en +1 y
+    // en las devoluciones.
+    if (library_only !== 'on') {
+      const appUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+      Waitlist.reconcileForBook(req.params.id)
+        .then((notified) => notified.forEach((entry) => sendWaitlistTurnNotification(entry, appUrl).catch((err) => console.warn('No se pudo avisar a la lista de espera:', err.message))))
+        .catch((err) => console.warn('No se pudo revisar la lista de espera:', err.message));
+    }
+
     res.redirect('/admin/books');
   } catch (err) {
     console.error(err);
@@ -276,6 +290,15 @@ exports.addCopies = async (req, res) => {
       details: reason ? `+${amount} — ${reason}` : `+${amount}`,
       beforeState: book ? { available_copies: book.available_copies } : null,
     });
+
+    // Una copia más significa que alguien en lista de espera podría
+    // reclamarla — reconcileForBook avisa a tantas personas de la
+    // fila como cupos libres haya de verdad (no solo a una).
+    const appUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+    Waitlist.reconcileForBook(req.params.id)
+      .then((notified) => notified.forEach((entry) => sendWaitlistTurnNotification(entry, appUrl).catch((err) => console.warn('No se pudo avisar a la lista de espera:', err.message))))
+      .catch((err) => console.warn('No se pudo revisar la lista de espera:', err.message));
+
     req.flash('success', `Se agregaron ${amount} copia(s).`);
   } catch (err) {
     console.error(err);

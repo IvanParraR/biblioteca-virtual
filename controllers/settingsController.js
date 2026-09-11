@@ -1,18 +1,27 @@
 const Settings = require('../models/Settings');
 const ActivityLog = require('../models/ActivityLog');
+const EmailDomain = require('../models/EmailDomain');
+const StudentEmailDomain = require('../models/StudentEmailDomain');
 const { PALETTES } = require('../models/Palettes');
+const { isPhoneValid } = require('../utils/validators');
 
 const SCHOOL_NAME = () => Settings.get().school_name;
 
 exports.show = async (req, res) => {
   try {
-    const settings = await Settings.getFull();
+    const [settings, emailDomains, studentEmailDomains] = await Promise.all([
+      Settings.getFull(),
+      EmailDomain.all(),
+      StudentEmailDomain.all(),
+    ]);
     res.render('admin/settings', {
       pageTitle: 'Información general',
       schoolName: SCHOOL_NAME(),
       admin: req.session.admin,
       settings,
       palettes: PALETTES,
+      emailDomains,
+      studentEmailDomains,
     });
   } catch (err) {
     console.error(err);
@@ -28,16 +37,23 @@ exports.update = async (req, res) => {
       welcome_title, welcome_message,
       address, city, phone, email, hours,
       social_facebook, social_instagram, social_twitter, social_whatsapp,
-      maintenance_mode, loan_days_default,
+      maintenance_mode, loan_days_default, max_active_loans,
     } = req.body;
 
     if (!school_name || !school_name.trim() || !library_name || !library_name.trim()) {
       req.flash('error', 'El nombre del colegio y de la biblioteca son obligatorios.');
       return res.redirect('/admin/settings');
     }
+    if (!isPhoneValid(phone)) {
+      req.flash('error', 'Ese teléfono no parece válido — usa solo números, espacios o guiones, con el indicativo de país si quieres (ej. +57 300 123 4567).');
+      return res.redirect('/admin/settings');
+    }
 
     const parsedLoanDays = parseInt(loan_days_default, 10);
     const loanDaysDefault = Number.isInteger(parsedLoanDays) && parsedLoanDays > 0 ? parsedLoanDays : 7;
+
+    const parsedMaxLoans = parseInt(max_active_loans, 10);
+    const maxActiveLoans = Number.isInteger(parsedMaxLoans) && parsedMaxLoans > 0 ? parsedMaxLoans : 3;
 
     const paletteKey = PALETTES[color_palette] ? color_palette : 'bosque';
 
@@ -64,6 +80,7 @@ exports.update = async (req, res) => {
       social_whatsapp: (social_whatsapp || '').trim(),
       maintenance_mode: maintenance_mode === 'on',
       loan_days_default: loanDaysDefault,
+      max_active_loans: maxActiveLoans,
     };
 
     await Settings.update(newFields, req.session.admin.username);

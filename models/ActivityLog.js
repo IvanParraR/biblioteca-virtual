@@ -34,6 +34,9 @@ const ACTION_TYPES = {
   category_merged: { label: 'Fusionó la categoría', entity_type: 'category' },
   category_deleted: { label: 'Eliminó la categoría', entity_type: 'category' },
   admin_created: { label: 'Creó la cuenta de administrador', entity_type: 'admin' },
+  email_domain_added: { label: 'Agregó el dominio de correo permitido', entity_type: 'settings' },
+  email_domain_removed: { label: 'Eliminó el dominio de correo permitido', entity_type: 'settings' },
+  student_status_changed: { label: 'Cambió el estado de la cuenta de', entity_type: 'student' },
   admin_permission_granted: { label: 'Otorgó permiso de gestión a', entity_type: 'admin' },
   admin_permission_revoked: { label: 'Quitó permiso de gestión a', entity_type: 'admin' },
   admin_deleted: { label: 'Eliminó la cuenta de administrador', entity_type: 'admin' },
@@ -56,6 +59,7 @@ const ENTITY_LABELS = {
   admin: 'Administrador',
   settings: 'Configuración',
   loan: 'Préstamo',
+  student: 'Estudiante',
 };
 
 // Únicamente estas acciones son "seguras" de deshacer: cambian un

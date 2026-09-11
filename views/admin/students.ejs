@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+<%- include('../partials/head') %>
+<body>
+  <%- include('../partials/nav-admin') %>
+
+  <div class="admin-page-head">
+    <div>
+      <h1 style="margin-bottom:2px;">Estudiantes</h1>
+      <p style="color:var(--ink-600); font-size:0.9rem;"><%= students.length %> estudiante<%= students.length === 1 ? '' : 's' %>.</p>
+    </div>
+  </div>
+
+  <% if (successMsg && successMsg.length) { %><div class="alert alert-success"><%= successMsg[0] %></div><% } %>
+  <% if (errorMsg && errorMsg.length) { %><div class="alert alert-error"><%= errorMsg[0] %></div><% } %>
+
+  <form action="/admin/students" method="GET" class="filter-bar">
+    <div class="field" style="grid-column: span 2;">
+      <label for="q">Buscar</label>
+      <input type="text" id="q" name="q" value="<%= q %>" placeholder="Nombre o código…">
+    </div>
+    <div class="field">
+      <button type="submit" class="btn btn-primary btn-block">Filtrar</button>
+    </div>
+  </form>
+
+  <% if (students.length > 0) { %>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead><tr><th>Nombre</th><th>Código</th><th>Grado</th><th>Correo</th><th>Estado</th><th>Cuenta</th></tr></thead>
+        <tbody>
+          <% students.forEach(s => { %>
+            <tr>
+              <td data-label="Nombre"><a href="/admin/students/<%= s.id %>"><strong><%= s.full_name %></strong></a></td>
+              <td data-label="Código"><%= s.student_code || '—' %></td>
+              <td data-label="Grado"><%= s.grade || '—' %></td>
+              <td data-label="Correo"><%= s.email || '—' %></td>
+              <td data-label="Estado">
+                <% if (s.status === 'inactive') { %><span class="badge badge-no_disponible">Inactivo</span>
+                <% } else { %><span class="badge badge-disponible">Activo</span><% } %>
+              </td>
+              <td data-label="Cuenta">
+                <% if (!s.email) { %><span style="color:var(--ink-400); font-size:0.82rem;">Sin cuenta</span>
+                <% } else if (s.pending_confirmation) { %><span class="badge badge-prestado" style="font-size:0.72rem;">Pendiente</span>
+                <% } else { %><span class="badge badge-disponible" style="font-size:0.72rem;">Confirmada</span><% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } else { %>
+    <div class="empty-state">
+      <h3>No hay estudiantes que coincidan</h3>
+      <p>Prueba con otro término de búsqueda.</p>
+    </div>
+  <% } %>
+
+  <%- include('../partials/footer-admin') %>
+</body>
+</html>
