@@ -14,5 +14,7 @@ router.get('/contrasena', studentAccountController.showChangePassword);
 router.post('/contrasena', studentAccountController.changePassword);
 router.get('/espera', studentAccountController.myWaitlist);
 router.post('/espera/:id/cancelar', studentAccountController.cancelWaitlist);
+router.get('/referencias', studentAccountController.references);
+router.post('/referencias/:id/eliminar', studentAccountController.deleteReference);
 
 module.exports = router;

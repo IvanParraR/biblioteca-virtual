@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<%- include('../../partials/head') %>
+<body>
+  <%- include('../../partials/nav-student') %>
+  <%- include('../../partials/nav-student-account') %>
+
+  <div class="container" style="padding-bottom:60px;">
+    <% if (successMsg && successMsg.length) { %><div class="alert alert-success"><%= successMsg[0] %></div><% } %>
+    <% if (errorMsg && errorMsg.length) { %><div class="alert alert-error"><%= errorMsg[0] %></div><% } %>
+
+    <h1 style="margin-bottom:6px;">Mis referencias</h1>
+    <p style="color:var(--ink-600); margin-bottom:22px;">
+      Libros y artículos que guardaste desde <a href="/fuentes-abiertas" style="color:var(--forest-700); font-weight:600;">Fuentes abiertas</a>.
+    </p>
+
+    <% if (references.length > 0) { %>
+      <div style="display:flex; flex-direction:column; gap:14px;">
+        <% references.forEach(r => { %>
+          <div class="form-card">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+              <div style="min-width:0;">
+                <span class="badge badge-solo_biblioteca" style="margin-bottom:6px; display:inline-block;">
+                  <%= r.source_type === 'openlibrary_book' ? 'Libro' : 'Artículo' %>
+                </span>
+                <h3 style="font-size:1.02rem; margin-bottom:4px;">
+                  <% if (r.source_url) { %><a href="<%= r.source_url %>" target="_blank" rel="noopener"><%= r.title %></a><% } else { %><%= r.title %><% } %>
+                </h3>
+                <p style="color:var(--ink-600); font-size:0.85rem; margin-bottom:8px;">
+                  <%= r.authors || 'Autor desconocido' %><% if (r.year) { %> · <%= r.year %><% } %>
+                </p>
+                <p style="background:var(--paper); border:1px solid var(--forest-100); border-radius:8px; padding:10px 12px; font-size:0.82rem; color:var(--ink-600); margin-bottom:8px;">
+                  <%= r.citation_apa %>
+                </p>
+                <% if (r.open_access_url) { %>
+                  <a href="<%= r.open_access_url %>" target="_blank" rel="noopener" class="btn btn-gold btn-sm">
+                    <%= r.source_type === 'openlibrary_book' ? 'Leer gratis' : 'Ver texto abierto' %>
+                  </a>
+                <% } %>
+              </div>
+              <form action="/mi-cuenta/referencias/<%= r.id %>/eliminar" method="POST" style="margin:0; flex-shrink:0;">
+                <button type="submit" class="btn btn-outline btn-sm">Eliminar</button>
+              </form>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    <% } else { %>
+      <div class="empty-state">
+        <h3>Aún no has guardado ninguna referencia</h3>
+        <p>Busca en <a href="/fuentes-abiertas" style="color:var(--forest-700); font-weight:600;">Fuentes abiertas</a> y guarda lo que te sirva.</p>
+      </div>
+    <% } %>
+  </div>
+
+  <%- include('../../partials/footer') %>
+</body>
+</html>

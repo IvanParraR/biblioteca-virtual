@@ -20,6 +20,7 @@
       <a href="/" class="<%= currentPath === '/' ? 'active' : '' %>">Inicio</a>
       <a href="/catalogo" class="<%= currentPath === '/catalogo' ? 'active' : '' %>">Catálogo</a>
       <a href="/categorias" class="<%= currentPath === '/categorias' ? 'active' : '' %>">Categorías</a>
+      <a href="/fuentes-abiertas" class="<%= currentPath === '/fuentes-abiertas' ? 'active' : '' %>">Fuentes abiertas</a>
       <% if (typeof student !== 'undefined' && student) { %>
         <a href="/mi-cuenta" class="<%= currentPath.startsWith('/mi-cuenta') ? 'active' : '' %>">Mi cuenta</a>
       <% } else { %>
@@ -42,6 +43,10 @@
   <a href="/categorias" class="<%= currentPath === '/categorias' ? 'active' : '' %>">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
     Categorías
+  </a>
+  <a href="/fuentes-abiertas" class="<%= currentPath === '/fuentes-abiertas' ? 'active' : '' %>">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+    Fuentes
   </a>
   <% if (typeof student !== 'undefined' && student) { %>
     <a href="/mi-cuenta" class="<%= currentPath.startsWith('/mi-cuenta') ? 'active' : '' %>">

@@ -3,6 +3,7 @@ const Student = require('../models/Student');
 const Loan = require('../models/Loan');
 const Book = require('../models/Book');
 const Waitlist = require('../models/Waitlist');
+const SavedReference = require('../models/SavedReference');
 const { isPasswordValid, passwordHint } = require('../utils/passwordPolicy');
 const { isPhoneValid, isGradeValid, GRADES } = require('../utils/validators');
 
@@ -182,4 +183,32 @@ exports.cancelWaitlist = async (req, res) => {
     req.flash('error', 'No se pudo salir de la lista de espera.');
   }
   res.redirect('/mi-cuenta/espera');
+};
+
+// --- Mis referencias (Fuentes Abiertas) ---
+
+exports.references = async (req, res) => {
+  try {
+    const references = await SavedReference.forStudent(req.session.student.id);
+    res.render('student/account/references', {
+      pageTitle: 'Mis referencias',
+      schoolName: SCHOOL_NAME(),
+      references,
+    });
+  } catch (err) {
+    console.error(err);
+    req.flash('error', 'No se pudieron cargar tus referencias.');
+    res.redirect('/mi-cuenta');
+  }
+};
+
+exports.deleteReference = async (req, res) => {
+  try {
+    await SavedReference.delete(req.params.id, req.session.student.id);
+    req.flash('success', 'Referencia eliminada.');
+  } catch (err) {
+    console.error(err);
+    req.flash('error', 'No se pudo eliminar la referencia.');
+  }
+  res.redirect('/mi-cuenta/referencias');
 };

@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="es">
+<%- include('../partials/head') %>
+<body class="has-bottom-nav">
+  <%- include('../partials/nav-student') %>
+
+  <div class="container" style="padding-top:32px; padding-bottom:60px;">
+    <h1 style="margin-bottom:4px;">Fuentes abiertas</h1>
+    <p style="color:var(--ink-600); margin-bottom:22px;">
+      Busca libros y artículos científicos de acceso abierto — con Open Library y OpenAlex/DOAJ. Puedes citar en APA cualquier resultado, y si inicias sesión, guardarlo en tus referencias.
+    </p>
+
+    <% if (successMsg && successMsg.length) { %><div class="alert alert-success"><%= successMsg[0] %></div><% } %>
+    <% if (errorMsg && errorMsg.length) { %><div class="alert alert-error"><%= errorMsg[0] %></div><% } %>
+
+    <div style="display:flex; gap:8px; margin-bottom:20px; border-bottom:1px solid var(--forest-100); padding-bottom:14px;">
+      <a href="/fuentes-abiertas?tipo=libros<%= q ? '&q=' + encodeURIComponent(q) : '' %>" class="btn <%= tipo === 'libros' ? 'btn-primary' : 'btn-outline' %> btn-sm">Libros virtuales</a>
+      <a href="/fuentes-abiertas?tipo=papers<%= q ? '&q=' + encodeURIComponent(q) : '' %>" class="btn <%= tipo === 'papers' ? 'btn-primary' : 'btn-outline' %> btn-sm">Artículos científicos</a>
+    </div>
+
+    <!--
+      IMPORTANTE: este <form> envuelve SOLO la búsqueda y los filtros
+      de la izquierda — se cierra antes de que empiecen los
+      resultados. Los resultados (con sus propios formularios
+      chiquitos de "Guardar") van AFUERA de este form, como hermanos
+      dentro del mismo grid — nunca un <form> metido dentro de otro
+      <form>, porque eso es inválido en HTML y los navegadores lo
+      manejan de forma impredecible (rompe los formularios que caen
+      después del primero).
+    -->
+    <div style="display:grid; grid-template-columns: 240px 1fr; gap:24px; align-items:start;">
+      <!-- ---------- Búsqueda + Filtros (sidebar, es el <form>) ---------- -->
+      <form action="/fuentes-abiertas" method="GET" class="form-card" style="position:sticky; top:16px;">
+        <input type="hidden" name="tipo" value="<%= tipo %>">
+
+        <div class="field" style="margin-bottom:16px;">
+          <label for="q">Buscar por título</label>
+          <input type="text" id="q" name="q" value="<%= q %>" placeholder="<%= tipo === 'libros' ? 'Título del libro…' : 'Título del artículo…' %>" autofocus>
+        </div>
+
+        <h3 style="font-size:0.95rem; margin-bottom:14px;">Filtros</h3>
+
+        <% if (tipo === 'papers') { %>
+          <div class="field" style="margin-bottom:14px;">
+            <label for="type">Tipo de publicación</label>
+            <select id="type" name="type">
+              <% paperTypes.forEach(t => { %>
+                <option value="<%= t.value %>" <%= filters.type === t.value ? 'selected' : '' %>><%= t.label %></option>
+              <% }) %>
+            </select>
+          </div>
+        <% } %>
+
+        <div class="field" style="margin-bottom:14px;">
+          <label>Año</label>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <select name="yearFrom" style="width:0; flex:1;">
+              <option value="">Desde</option>
+              <% yearOptions.forEach(y => { %>
+                <option value="<%= y %>" <%= filters.yearFrom === y ? 'selected' : '' %>><%= y %></option>
+              <% }) %>
+            </select>
+            <span style="color:var(--ink-400);">–</span>
+            <select name="yearTo" style="width:0; flex:1;">
+              <option value="">Hasta</option>
+              <% yearOptions.forEach(y => { %>
+                <option value="<%= y %>" <%= filters.yearTo === y ? 'selected' : '' %>><%= y %></option>
+              <% }) %>
+            </select>
+          </div>
+          <span class="field-hint">Si "Hasta" queda antes que "Desde", se intercambian solos.</span>
+        </div>
+
+        <div class="field" style="margin-bottom:14px;">
+          <label for="language">Idioma</label>
+          <select id="language" name="language">
+            <option value="">Cualquiera</option>
+            <% languages.forEach(l => { %>
+              <option value="<%= l.openalex %>" <%= filters.language === l.openalex ? 'selected' : '' %>><%= l.label %></option>
+            <% }) %>
+          </select>
+        </div>
+
+        <div class="field" style="margin-bottom:14px;">
+          <label for="author">Autor</label>
+          <input type="text" id="author" name="author" value="<%= filters.author %>" placeholder="Nombre del autor…">
+        </div>
+
+        <% if (tipo === 'libros') { %>
+          <div class="field" style="margin-bottom:14px;">
+            <label for="subject">Tema</label>
+            <input type="text" id="subject" name="subject" value="<%= filters.subject %>" placeholder="Ej. historia, matemáticas…">
+          </div>
+        <% } %>
+
+        <div class="field field-full checkbox-field" style="margin-bottom:14px;">
+          <input type="checkbox" id="openAccessOnly" name="openAccessOnly" <%= filters.openAccessOnly ? 'checked' : '' %>>
+          <label for="openAccessOnly" style="text-transform:none;">Solo con texto completo gratis</label>
+        </div>
+
+        <div class="field" style="margin-bottom:18px;">
+          <label for="sort">Ordenar por</label>
+          <select id="sort" name="sort">
+            <% (tipo === 'libros' ? bookSorts : paperSorts).forEach(s => { %>
+              <option value="<%= s.value %>" <%= filters.sort === s.value ? 'selected' : '' %>><%= s.label %></option>
+            <% }) %>
+          </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">Buscar</button>
+        <% if (q) { %>
+          <a href="/fuentes-abiertas?tipo=<%= tipo %>" class="btn btn-outline btn-block" style="margin-top:8px;">Limpiar todo</a>
+        <% } %>
+      </form>
+
+      <!-- ---------- Resultados (fuera del <form> de arriba) ---------- -->
+      <div>
+        <% if (typeof sourceWarnings !== 'undefined' && sourceWarnings.length > 0 && !searchError) { %>
+          <div class="alert alert-error" style="margin-bottom:14px;">
+            <%= sourceWarnings.join(' ') %> Se muestran los resultados de la(s) fuente(s) que sí respondieron.
+          </div>
+        <% } %>
+        <% if (searchError) { %>
+          <div class="alert alert-error"><%= searchError %></div>
+        <% } else if (searched && results.length === 0) { %>
+          <div class="empty-state">
+            <h3>Sin resultados para "<%= q %>"</h3>
+            <p>Prueba con otras palabras, quita algún filtro, o cambia de pestaña.</p>
+          </div>
+        <% } else if (results.length > 0) { %>
+          <p style="color:var(--ink-600); font-size:0.85rem; margin:0 0 14px;"><%= results.length %> resultado<%= results.length === 1 ? '' : 's' %></p>
+
+          <div style="display:flex; flex-direction:column; gap:14px;">
+            <% results.forEach(r => { %>
+              <div class="form-card" style="display:flex; gap:16px; align-items:flex-start;">
+                <% if (tipo === 'libros' && r.coverUrl) { %>
+                  <img src="<%= r.coverUrl %>" alt="Portada de <%= r.title %>" style="width:64px; height:auto; border-radius:6px; flex-shrink:0;">
+                <% } %>
+                <div style="flex:1; min-width:0;">
+                  <h3 style="font-size:1.02rem; margin-bottom:4px;">
+                    <% if (r.sourceUrl) { %><a href="<%= r.sourceUrl %>" target="_blank" rel="noopener"><%= r.title %></a><% } else { %><%= r.title %><% } %>
+                  </h3>
+                  <p style="color:var(--ink-600); font-size:0.85rem; margin-bottom:6px;">
+                    <%= r.authors && r.authors.length ? r.authors.join('; ') : 'Autor desconocido' %>
+                    <% if (r.year) { %> · <%= r.year %><% } %>
+                    <% if (tipo === 'papers' && r.venue) { %> · <%= r.venue %><% } %>
+                    <% if (tipo === 'libros' && r.publisher) { %> · <%= r.publisher %><% } %>
+                    <% if (tipo === 'papers' && r.citedByCount !== null && typeof r.citedByCount !== 'undefined') { %> · <%= r.citedByCount %> cita<%= r.citedByCount === 1 ? '' : 's' %><% } %>
+                  </p>
+
+                  <% if (tipo === 'papers' && r.source) { %>
+                    <p style="color:var(--ink-400); font-size:0.76rem; margin-bottom:6px;">Fuente: <%= r.source %></p>
+                  <% } %>
+
+                  <% if (tipo === 'libros' && r.subjects && r.subjects.length) { %>
+                    <p style="color:var(--ink-400); font-size:0.78rem; margin-bottom:6px;"><%= r.subjects.join(' · ') %></p>
+                  <% } %>
+
+                  <% if (r.isOpenAccess) { %>
+                    <span class="badge badge-disponible" style="margin-bottom:8px; display:inline-block;">
+                      <%= tipo === 'libros' ? 'Texto completo gratis' : 'Acceso abierto' %>
+                    </span>
+                  <% } %>
+
+                  <p style="background:var(--paper); border:1px solid var(--forest-100); border-radius:8px; padding:10px 12px; font-size:0.82rem; color:var(--ink-600); margin-bottom:10px;">
+                    <%= r.citationApa %>
+                  </p>
+
+                  <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <% if (r.openAccessUrl) { %>
+                      <a href="<%= r.openAccessUrl %>" target="_blank" rel="noopener" class="btn btn-gold btn-sm"><%= tipo === 'libros' ? 'Leer gratis' : 'Ver texto abierto' %></a>
+                    <% } %>
+                    <% if (r.sourceUrl) { %>
+                      <a href="<%= r.sourceUrl %>" target="_blank" rel="noopener" class="btn btn-outline btn-sm">Ver ficha</a>
+                    <% } %>
+                    <% if (typeof student !== 'undefined' && student) { %>
+                      <form action="/fuentes-abiertas/guardar" method="POST" style="margin:0;">
+                        <input type="hidden" name="source_type" value="<%= r.sourceType %>">
+                        <input type="hidden" name="source_id" value="<%= r.sourceId %>">
+                        <input type="hidden" name="title" value="<%= r.title %>">
+                        <input type="hidden" name="authors" value="<%= (r.authors || []).join('; ') %>">
+                        <input type="hidden" name="year" value="<%= r.year || '' %>">
+                        <input type="hidden" name="citation_apa" value="<%= r.citationApa %>">
+                        <input type="hidden" name="source_url" value="<%= r.sourceUrl || '' %>">
+                        <input type="hidden" name="open_access_url" value="<%= r.openAccessUrl || '' %>">
+                        <input type="hidden" name="redirect_back" value="<%= currentUrl %>">
+                        <button type="submit" class="btn btn-outline btn-sm">Guardar en mis referencias</button>
+                      </form>
+                    <% } else { %>
+                      <a href="/iniciar-sesion" class="btn btn-outline btn-sm">Inicia sesión para guardar</a>
+                    <% } %>
+                  </div>
+                </div>
+              </div>
+            <% }) %>
+          </div>
+
+          <% if (page > 1 || hasNextPage) { %>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px;">
+              <% if (page > 1) { %>
+                <a href="/fuentes-abiertas?<%= pageBaseQuery %>&page=<%= page - 1 %>" class="btn btn-outline btn-sm">← Anterior</a>
+              <% } else { %>
+                <span></span>
+              <% } %>
+              <span style="color:var(--ink-600); font-size:0.85rem;">Página <%= page %></span>
+              <% if (hasNextPage) { %>
+                <a href="/fuentes-abiertas?<%= pageBaseQuery %>&page=<%= page + 1 %>" class="btn btn-outline btn-sm">Siguiente →</a>
+              <% } else { %>
+                <span></span>
+              <% } %>
+            </div>
+          <% } %>
+        <% } else { %>
+          <div class="empty-state">
+            <h3>Busca por título para empezar</h3>
+            <p>Escribe el título de <%= tipo === 'libros' ? 'un libro' : 'un artículo' %> a la izquierda — puedes afinar con los filtros.</p>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <%- include('../partials/footer') %>
+</body>
+</html>

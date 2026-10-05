@@ -336,10 +336,4 @@ El Quijote,Miguel de Cervantes,9788420412146,Literatura,Novela clásica español
 
 Campos obligatorios: `title`, `author`, `isbn`, `category`. Los demás son opcionales.
 
-## 16. Próximos pasos sugeridos
 
-- Implementar el flujo completo de préstamos (solicitud, devolución, historial).
-- Agregar recuperación de contraseña para administradores.
-- Exportar el catálogo o reportes en PDF/Excel.
-- Roles adicionales (bibliotecario vs. administrador general).
-- Notificaciones de vencimiento cuando se active el módulo de préstamos.
