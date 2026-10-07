@@ -196,17 +196,37 @@
           </div>
 
           <% if (page > 1 || hasNextPage) { %>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px;">
+            <div style="display:flex; justify-content:center; align-items:center; gap:6px; margin-top:24px; flex-wrap:wrap;">
               <% if (page > 1) { %>
                 <a href="/fuentes-abiertas?<%= pageBaseQuery %>&page=<%= page - 1 %>" class="btn btn-outline btn-sm">← Anterior</a>
-              <% } else { %>
-                <span></span>
               <% } %>
-              <span style="color:var(--ink-600); font-size:0.85rem;">Página <%= page %></span>
+
+              <% for (let p = page; p <= page + 3; p++) { %>
+                <% if (p === page) { %>
+                  <span class="btn btn-primary btn-sm" style="cursor:default;"><%= p %></span>
+                <% } else { %>
+                  <a href="/fuentes-abiertas?<%= pageBaseQuery %>&page=<%= p %>" class="btn btn-outline btn-sm"><%= p %></a>
+                <% } %>
+              <% } %>
+
+              <span style="color:var(--ink-400); padding:0 2px;">…</span>
+              <form action="/fuentes-abiertas" method="GET" style="display:inline-flex; gap:4px; align-items:center; margin:0;">
+                <input type="hidden" name="tipo" value="<%= tipo %>">
+                <input type="hidden" name="q" value="<%= q %>">
+                <% if (filters.type) { %><input type="hidden" name="type" value="<%= filters.type %>"><% } %>
+                <% if (filters.yearFrom) { %><input type="hidden" name="yearFrom" value="<%= filters.yearFrom %>"><% } %>
+                <% if (filters.yearTo) { %><input type="hidden" name="yearTo" value="<%= filters.yearTo %>"><% } %>
+                <% if (filters.language) { %><input type="hidden" name="language" value="<%= filters.language %>"><% } %>
+                <% if (filters.author) { %><input type="hidden" name="author" value="<%= filters.author %>"><% } %>
+                <% if (filters.subject) { %><input type="hidden" name="subject" value="<%= filters.subject %>"><% } %>
+                <% if (filters.openAccessOnly) { %><input type="hidden" name="openAccessOnly" value="on"><% } %>
+                <% if (filters.sort) { %><input type="hidden" name="sort" value="<%= filters.sort %>"><% } %>
+                <input type="number" name="page" min="1" placeholder="Ir a…" style="width:72px; padding:6px 8px; border-radius:var(--radius-sm); border:1px solid var(--line); font-size:0.85rem; background:var(--paper); color:var(--ink-900);">
+                <button type="submit" class="btn btn-outline btn-sm">Ir</button>
+              </form>
+
               <% if (hasNextPage) { %>
                 <a href="/fuentes-abiertas?<%= pageBaseQuery %>&page=<%= page + 1 %>" class="btn btn-outline btn-sm">Siguiente →</a>
-              <% } else { %>
-                <span></span>
               <% } %>
             </div>
           <% } %>
