@@ -8,14 +8,15 @@
     <div class="container">
       <p class="hero-eyebrow">Catálogo digital escolar</p>
       <h1><%= (typeof siteSettings !== 'undefined' && siteSettings.welcome_title) ? siteSettings.welcome_title : `Encuentra tu próximo libro en la biblioteca de ${schoolName}` %></h1>
-      <p><%= (typeof siteSettings !== 'undefined' && siteSettings.welcome_message) ? siteSettings.welcome_message : 'Busca por título, autor, ISBN o categoría y consulta al instante qué libros están disponibles, prestados o solo para consulta en sala.' %></p>
+      <% const searchScope = modules.categorias ? 'título, autor, ISBN o categoría' : 'título, autor o ISBN'; %>
+      <p><%= (typeof siteSettings !== 'undefined' && siteSettings.welcome_message) ? siteSettings.welcome_message : `Busca por ${searchScope} y consulta al instante qué libros están disponibles, prestados o solo para consulta en sala.` %></p>
 
       <form action="/catalogo" method="GET" class="search-card" role="search">
-        <input type="text" name="q" placeholder="Busca por título, autor, ISBN o categoría…" aria-label="Buscar libros">
+        <input type="text" name="q" placeholder="Busca por <%= searchScope %>…" aria-label="Buscar libros">
         <button type="submit">Buscar</button>
       </form>
       <div class="search-scopes">
-        <span>Título</span><span>Autor</span><span>ISBN</span><span>Categoría</span>
+        <span>Título</span><span>Autor</span><span>ISBN</span><% if (modules.categorias) { %><span>Categoría</span><% } %>
       </div>
     </div>
   </section>
@@ -49,6 +50,7 @@
     <% } %>
   </section>
 
+  <% if (modules.categorias) { %>
   <section class="section container" style="padding-top:0;">
     <div class="section-head">
       <h2>Explora por categoría</h2>
@@ -71,6 +73,7 @@
       </div>
     <% } %>
   </section>
+  <% } %>
 
   <%- include('../partials/footer') %>
 </body>

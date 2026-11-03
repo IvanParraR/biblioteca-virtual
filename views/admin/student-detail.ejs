@@ -31,10 +31,12 @@
           <% } else { %>Confirmada<% } %>
         </div>
       </div>
+      <% if (modules.prestamos) { %>
       <div class="info-item">
         <div class="info-label">Recordatorio de vencimiento</div>
         <div class="info-value"><%= student.notify_due_reminder ? 'Activado' : 'Desactivado' %></div>
       </div>
+      <% } %>
     </div>
 
     <% if (student.email) { %>
@@ -49,6 +51,7 @@
     <% } %>
   </div>
 
+  <% if (modules.prestamos) { %>
   <div class="stat-grid" style="margin-bottom:28px;">
     <div class="stat-card">
       <div class="stat-label">Préstamos totales</div>
@@ -96,6 +99,7 @@
     </div>
   <% } else { %>
     <p style="color:var(--ink-600);">Sin historial de préstamos todavía.</p>
+  <% } %>
   <% } %>
 
   <%- include('../partials/footer-admin') %>

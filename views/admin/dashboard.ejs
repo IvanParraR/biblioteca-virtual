@@ -31,14 +31,17 @@
       <div class="stat-label">Copias disponibles</div>
       <div class="stat-value"><%= stats.totals.available_copies %></div>
     </div>
+    <% if (modules.prestamos) { %>
     <div class="stat-card">
       <div class="stat-label">Copias prestadas</div>
       <div class="stat-value"><%= stats.totals.borrowed_copies %></div>
     </div>
+    <% } %>
     <div class="stat-card">
       <div class="stat-label">Libros no disponibles</div>
       <div class="stat-value"><%= stats.totals.unavailable_books %></div>
     </div>
+    <% if (modules.prestamos) { %>
     <a href="/admin/loans" class="stat-card" style="text-decoration:none; display:block;">
       <div class="stat-label">Préstamos activos</div>
       <div class="stat-value"><%= loanStats.active %></div>
@@ -47,9 +50,11 @@
       <div class="stat-label">Préstamos atrasados</div>
       <div class="stat-value"><%= loanStats.overdue %></div>
     </a>
+    <% } %>
   </div>
 
-  <div style="display:grid; grid-template-columns: 1.3fr 1fr; gap:24px;" class="dash-grid">
+  <div style="display:grid; grid-template-columns: <%= modules.categorias ? '1.3fr 1fr' : '1fr' %>; gap:24px;" class="dash-grid">
+    <% if (modules.categorias) { %>
     <div class="table-wrap" style="padding:24px;">
       <h2 style="font-size:1.1rem; margin-bottom:18px;">Disponibilidad por categoría</h2>
       <% if (stats.byCategory.length > 0) { %>
@@ -67,6 +72,7 @@
         <p style="color:var(--ink-400); font-size:0.88rem;">Aún no hay libros para mostrar estadísticas.</p>
       <% } %>
     </div>
+    <% } %>
 
     <div class="table-wrap" style="padding:24px;">
       <h2 style="font-size:1.1rem; margin-bottom:18px;">Agregados recientemente</h2>
