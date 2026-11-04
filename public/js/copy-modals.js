@@ -40,7 +40,8 @@
       const bookId = btn.dataset.bookId;
       removeForm.setAttribute('action', `/admin/books/${bookId}/remove-copies`);
       removeTitleEl.textContent = btn.dataset.title || 'este libro';
-      removeAsLoanLink.setAttribute('href', `/admin/loans/new?book_id=${bookId}`);
+      // No existe con el módulo de Préstamos apagado.
+      if (removeAsLoanLink) removeAsLoanLink.setAttribute('href', `/admin/loans/new?book_id=${bookId}`);
       removeRedirectInput.value = currentPageUrl;
       resetRemoveModal();
       removeModal.classList.add('open');

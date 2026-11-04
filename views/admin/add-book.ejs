@@ -28,6 +28,7 @@
           <label for="isbn">ISBN *</label>
           <input type="text" id="isbn" name="isbn" required placeholder="Ej. 9780156012195">
         </div>
+        <% if (modules.categorias) { %>
         <div class="field">
           <label for="category_id">Categoría *</label>
           <select id="category_id" name="category_id" <%= categories.length ? 'required' : '' %>>
@@ -45,6 +46,7 @@
             <span class="field-hint">Se reutilizará automáticamente si ya existe una categoría con ese nombre (sin importar mayúsculas).</span>
           </div>
         </div>
+        <% } %>
         <div class="field">
           <label for="publisher">Editorial</label>
           <input type="text" id="publisher" name="publisher" placeholder="Ej. Reynal & Hitchcock">
@@ -83,6 +85,7 @@
     </form>
   </div>
 
+  <% if (modules.categorias) { %>
   <script>
     document.getElementById('toggle-new-category').addEventListener('click', function (e) {
       e.preventDefault();
@@ -97,6 +100,7 @@
       }
     });
   </script>
+  <% } %>
 
   <%- include('../partials/footer-admin') %>
 </body>

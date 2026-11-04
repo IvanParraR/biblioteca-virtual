@@ -1,4 +1,5 @@
 const Settings = require('../models/Settings');
+const Modules = require('../models/Modules');
 const fs = require('fs');
 const csv = require('csv-parser');
 const Book = require('../models/Book');
@@ -12,7 +13,10 @@ const SCHOOL_NAME = () => Settings.get().school_name;
 
 exports.dashboard = async (req, res) => {
   try {
-    const [stats, loanStats] = await Promise.all([Book.stats(), Loan.stats()]);
+    const [stats, loanStats] = await Promise.all([
+      Book.stats(),
+      Modules.isEnabled('prestamos') ? Loan.stats() : { active: 0, overdue: 0 },
+    ]);
     res.render('admin/dashboard', {
       pageTitle: 'Panel de administración',
       schoolName: SCHOOL_NAME(),
@@ -38,11 +42,13 @@ exports.dashboard = async (req, res) => {
 
 exports.listBooks = async (req, res) => {
   try {
-    const { q, category, availability, page } = req.query;
+    const { q, availability, page } = req.query;
+    const categoriesOn = Modules.isEnabled('categorias');
+    const category = categoriesOn ? req.query.category : undefined;
     const [result, categories, activeLoans] = await Promise.all([
       Book.search({ q, category, availability, page: parseInt(page, 10) || 1, perPage: 10 }),
-      Book.categories(),
-      Loan.listActive({}),
+      categoriesOn ? Book.categories() : [],
+      Modules.isEnabled('prestamos') ? Loan.listActive({}) : [],
     ]);
     // Agrupa los préstamos activos por libro, para que el modal de
     // "marcar disponible" (+1) pueda ofrecer devolver uno puntual
@@ -101,9 +107,14 @@ exports.createBook = async (req, res) => {
     // Si el administrador escribió una categoría nueva, se crea (o se
     // reutiliza si ya existe con otra capitalización/espacios). Si no,
     // se usa la categoría existente seleccionada en el menú.
-    const finalCategoryId = new_category && new_category.trim()
-      ? await Category.findOrCreate(new_category)
-      : parseInt(category_id, 10);
+    let finalCategoryId;
+    if (!Modules.isEnabled('categorias')) {
+      finalCategoryId = await Category.findOrCreate(Category.DEFAULT_NAME);
+    } else {
+      finalCategoryId = new_category && new_category.trim()
+        ? await Category.findOrCreate(new_category)
+        : parseInt(category_id, 10);
+    }
 
     if (!finalCategoryId) {
       req.flash('error', 'Selecciona una categoría existente o escribe una nueva.');
@@ -171,9 +182,15 @@ exports.updateBook = async (req, res) => {
     const existing = await Book.findById(req.params.id);
     const cover_url = req.file ? `/uploads/covers/${req.file.filename}` : existing.cover_url;
 
-    const finalCategoryId = new_category && new_category.trim()
-      ? await Category.findOrCreate(new_category)
-      : parseInt(category_id, 10);
+    // Con Categorías apagado, el libro conserva la que ya tenía.
+    let finalCategoryId;
+    if (!Modules.isEnabled('categorias')) {
+      finalCategoryId = existing.category_id;
+    } else {
+      finalCategoryId = new_category && new_category.trim()
+        ? await Category.findOrCreate(new_category)
+        : parseInt(category_id, 10);
+    }
 
     if (!finalCategoryId) {
       req.flash('error', 'Selecciona una categoría existente o escribe una nueva.');
@@ -227,7 +244,7 @@ exports.updateBook = async (req, res) => {
     // library_only no bloquea el préstamo), puede que alguien en
     // lista de espera ya tenga cupo — se revisa igual que en +1 y
     // en las devoluciones.
-    if (library_only !== 'on') {
+    if (library_only !== 'on' && Modules.isEnabled('prestamos')) {
       const appUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
       Waitlist.reconcileForBook(req.params.id)
         .then((notified) => notified.forEach((entry) => sendWaitlistTurnNotification(entry, appUrl).catch((err) => console.warn('No se pudo avisar a la lista de espera:', err.message))))
@@ -294,10 +311,12 @@ exports.addCopies = async (req, res) => {
     // Una copia más significa que alguien en lista de espera podría
     // reclamarla — reconcileForBook avisa a tantas personas de la
     // fila como cupos libres haya de verdad (no solo a una).
-    const appUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
-    Waitlist.reconcileForBook(req.params.id)
-      .then((notified) => notified.forEach((entry) => sendWaitlistTurnNotification(entry, appUrl).catch((err) => console.warn('No se pudo avisar a la lista de espera:', err.message))))
-      .catch((err) => console.warn('No se pudo revisar la lista de espera:', err.message));
+    if (Modules.isEnabled('prestamos')) {
+      const appUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+      Waitlist.reconcileForBook(req.params.id)
+        .then((notified) => notified.forEach((entry) => sendWaitlistTurnNotification(entry, appUrl).catch((err) => console.warn('No se pudo avisar a la lista de espera:', err.message))))
+        .catch((err) => console.warn('No se pudo revisar la lista de espera:', err.message));
+    }
 
     req.flash('success', `Se agregaron ${amount} copia(s).`);
   } catch (err) {
@@ -419,6 +438,9 @@ exports.bulkChangeCategory = async (req, res) => {
 // La columna "category" es texto libre en el CSV; se busca (sin
 // distinguir mayúsculas) o se crea automáticamente en la tabla
 // categories, evitando duplicados con las categorías existentes.
+// Con el módulo de Categorías apagado esa columna es opcional: si
+// viene se conserva (por si se enciende después), y si no, el libro
+// queda en la categoría por defecto.
 // ------------------------------------------------------------
 exports.showImportForm = (req, res) => {
   res.render('admin/import-csv', {
@@ -442,14 +464,15 @@ exports.importCsv = async (req, res) => {
     .on('data', (row) => rows.push(row))
     .on('end', async () => {
       let created = 0;
+      const categoriesOn = Modules.isEnabled('categorias');
       for (const [i, row] of rows.entries()) {
         try {
-          if (!row.title || !row.author || !row.isbn || !row.category) {
-            errors.push(`Fila ${i + 2}: faltan campos obligatorios (title, author, isbn, category).`);
+          if (!row.title || !row.author || !row.isbn || (categoriesOn && !row.category)) {
+            errors.push(`Fila ${i + 2}: faltan campos obligatorios (title, author, isbn${categoriesOn ? ', category' : ''}).`);
             continue;
           }
           const total = parseInt(row.total_copies, 10) || 1;
-          const category_id = await Category.findOrCreate(row.category);
+          const category_id = await Category.findOrCreate(row.category || Category.DEFAULT_NAME);
           await Book.create({
             title: row.title,
             author: row.author,

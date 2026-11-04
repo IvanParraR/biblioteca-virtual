@@ -1,4 +1,5 @@
 const Settings = require('../models/Settings');
+const Modules = require('../models/Modules');
 const Book = require('../models/Book');
 
 const SCHOOL_NAME = () => Settings.get().school_name;
@@ -7,7 +8,7 @@ exports.home = async (req, res) => {
   try {
     const [recent, categories, stats] = await Promise.all([
       Book.recent(4),
-      Book.categories(),
+      Modules.isEnabled('categorias') ? Book.categories() : [],
       Book.stats(),
     ]);
     res.render('student/home', {
@@ -33,7 +34,9 @@ exports.home = async (req, res) => {
 
 exports.catalog = async (req, res) => {
   try {
-    const { q, category, availability, author, sort, order, page } = req.query;
+    const { q, availability, author, sort, order, page } = req.query;
+    const categoriesOn = Modules.isEnabled('categorias');
+    const category = categoriesOn ? req.query.category : undefined;
     const [result, categories, authors] = await Promise.all([
       Book.search({
         q,
@@ -45,7 +48,7 @@ exports.catalog = async (req, res) => {
         page: parseInt(page, 10) || 1,
         perPage: 12,
       }),
-      Book.categories(),
+      categoriesOn ? Book.categories() : [],
       Book.authorsList(),
     ]);
 

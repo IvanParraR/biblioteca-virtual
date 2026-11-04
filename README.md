@@ -336,7 +336,38 @@ El Quijote,Miguel de Cervantes,9788420412146,Literatura,Novela clásica español
 
 Campos obligatorios: `title`, `author`, `isbn`, `category`. Los demás son opcionales.
 
-## 16. Próximos pasos sugeridos
+## 16. Módulos
+
+Desde **Panel de administración → Módulos** (solo cuentas con permiso de gestión) se enciende o apaga cada parte opcional del sitio, sin reiniciar el servidor. **Admin** y **Catálogo** son la base y no se pueden apagar.
+
+| Módulo | Qué se apaga |
+| --- | --- |
+| **Usuarios** | Registro, inicio de sesión, "Mi cuenta" y la sección Estudiantes del panel. También apaga Préstamos, que lo necesita. |
+| **Préstamos** | Préstamos y devoluciones, lista de espera, recordatorios por correo y sus estadísticas. |
+| **Fuentes abiertas** | La búsqueda en fuentes abiertas y "Mis referencias". |
+| **Categorías** | La página de categorías, los filtros, la columna en exportaciones y su gestión en el panel. |
+
+Apagar un módulo **no borra sus datos**: oculta sus enlaces y bloquea sus rutas (404 en el sitio público, aviso en el panel). Al encenderlo de nuevo todo sigue ahí.
+
+Con **Categorías** apagado, los libros nuevos quedan en una categoría llamada "General", porque cada libro necesita una en la base de datos. Los libros existentes conservan la suya, y esa categoría "General" se verá si el módulo se vuelve a encender.
+
+Con **Préstamos** apagado, los préstamos activos dejan de recibir recordatorios y sus copias siguen contando como no disponibles hasta que se encienda el módulo y se registre la devolución (o se ajusten con +1).
+
+Para agregar un módulo nuevo: se declara en `models/Modules.js`, se protegen sus rutas con `requireModule('clave')` y se ocultan sus enlaces en las vistas con `modules.clave`.
+
+**Si ya tenías el proyecto instalado antes de esta función**, ejecuta la migración (mientras no se corra, todos los módulos siguen encendidos y no se pueden apagar):
+
+```bash
+mysql -u root -p biblioteca_virtual < database/migrate_modules.sql
+```
+
+En PowerShell (Windows):
+
+```powershell
+Get-Content database/migrate_modules.sql | & "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -u root -p biblioteca_virtual
+```
+
+## 17. Próximos pasos sugeridos
 
 - Implementar el flujo completo de préstamos (solicitud, devolución, historial).
 - Agregar recuperación de contraseña para administradores.

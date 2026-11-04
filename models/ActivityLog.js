@@ -47,6 +47,7 @@ const ACTION_TYPES = {
   book_bulk_deleted: { label: 'Eliminó en lote', entity_type: 'book' },
   book_bulk_category_changed: { label: 'Cambió la categoría en lote de', entity_type: 'book' },
   site_settings_updated: { label: 'Actualizó la configuración del sitio', entity_type: 'settings' },
+  modules_updated: { label: 'Cambió los módulos del sitio', entity_type: 'settings' },
   loan_created: { label: 'Registró el préstamo de', entity_type: 'loan' },
   loan_returned: { label: 'Registró la devolución de', entity_type: 'loan' },
   loan_renewed: { label: 'Renovó el préstamo de', entity_type: 'loan' },

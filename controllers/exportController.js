@@ -1,4 +1,5 @@
 const Settings = require('../models/Settings');
+const Modules = require('../models/Modules');
 const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 const Book = require('../models/Book');
@@ -31,7 +32,8 @@ function filtersSummary(filters) {
 // de libros (q, category, availability), así el archivo exportado
 // refleja exactamente lo que el admin está viendo en pantalla.
 async function getFilteredBooks(req) {
-  const { q, category, availability } = req.query;
+  const { q, availability } = req.query;
+  const category = Modules.isEnabled('categorias') ? req.query.category : undefined;
   const books = await Book.searchAll({ q, category, availability, sort: 'title', order: 'asc' });
 
   let categoryName = null;
@@ -63,7 +65,7 @@ exports.exportExcel = async (req, res) => {
       { header: 'Disponibles', key: 'available_copies', width: 12 },
       { header: 'Estado', key: 'status_label', width: 20 },
       { header: 'Ubicación', key: 'location', width: 26 },
-    ];
+    ].filter((c) => c.key !== 'category' || Modules.isEnabled('categorias'));
 
     const headerRow = sheet.getRow(1);
     headerRow.font = { name: 'Calibri', bold: true, color: { argb: 'FFFFFFFF' } };
@@ -101,7 +103,7 @@ exports.exportExcel = async (req, res) => {
     });
 
     sheet.views = [{ state: 'frozen', ySplit: 1 }];
-    sheet.autoFilter = { from: 'A1', to: `J${books.length + 1}` };
+    sheet.autoFilter = { from: 'A1', to: `${sheet.getColumn(sheet.columns.length).letter}${books.length + 1}` };
 
     // Hoja resumen con estadísticas rápidas — útil para inventario anual.
     const summarySheet = workbook.addWorksheet('Resumen');
@@ -149,7 +151,7 @@ exports.exportPdf = async (req, res) => {
     doc.pipe(res);
 
     const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-    const columns = [
+    const visibleColumns = [
       { key: 'title', label: 'Título', width: 0.24 },
       { key: 'author', label: 'Autor', width: 0.16 },
       { key: 'isbn', label: 'ISBN', width: 0.11 },
@@ -159,7 +161,11 @@ exports.exportPdf = async (req, res) => {
       { key: 'available_copies', label: 'Disp.', width: 0.06 },
       { key: 'status_label', label: 'Estado', width: 0.11 },
       { key: 'location', label: 'Ubicación', width: 0.11 },
-    ].map((c) => ({ ...c, width: c.width * pageWidth }));
+    ].filter((c) => c.key !== 'category' || Modules.isEnabled('categorias'));
+    // Se reparte el ancho entre las columnas visibles para que la tabla
+    // siga ocupando toda la página aunque falte alguna.
+    const widthTotal = visibleColumns.reduce((sum, c) => sum + c.width, 0);
+    const columns = visibleColumns.map((c) => ({ ...c, width: (c.width / widthTotal) * pageWidth }));
 
     const truncate = (text, maxChars) => {
       if (!text) return '';
