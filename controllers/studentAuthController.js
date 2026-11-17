@@ -7,6 +7,10 @@ const { sendMail } = require('../config/mailer');
 const { confirmationEmail, temporaryPasswordEmail } = require('../utils/emailTemplates');
 const { isPasswordValid, passwordHint } = require('../utils/passwordPolicy');
 const { isGradeValid, GRADES } = require('../utils/validators');
+const { lockoutKeys } = require('../utils/lockoutKeys');
+const { clientIp } = require('../utils/requestContext');
+const ActivityLog = require('../models/ActivityLog');
+const { logAnonymousAccess, logStudent } = require('../utils/auditLog');
 
 const SCHOOL_NAME = () => Settings.get().school_name;
 
@@ -58,6 +62,16 @@ exports.register = async (req, res) => {
       password,
     });
 
+    await ActivityLog.log({
+      actorType: 'student',
+      studentId: id,
+      adminUsername: cleanEmail,
+      actionType: 'student_registered',
+      entityId: id,
+      entityLabel: cleanEmail,
+      details: claimed ? 'Reclamó un registro existente con su código' : null,
+    });
+
     const confirmUrl = `${baseUrl(req)}/confirmar-correo/${confirmationToken}`;
     const { subject, html, text } = confirmationEmail({ schoolName: SCHOOL_NAME(), fullName: full_name, confirmUrl });
     // El envío va aparte de la creación de la cuenta a propósito: la
@@ -106,11 +120,12 @@ exports.showLogin = (req, res) => {
 
 exports.login = async (req, res) => {
   const { email, password } = req.body;
-  const lockoutId = `studentlogin:${(email || '').trim().toLowerCase()}`;
+  const keys = lockoutKeys('studentlogin', email, clientIp(req));
 
   try {
-    const lockStatus = await LoginLockout.check(lockoutId);
+    const lockStatus = await LoginLockout.checkAny(keys);
     if (lockStatus.locked) {
+      await logAnonymousAccess({ actionType: 'student_login_blocked', typed: email });
       req.flash('error', `Demasiados intentos fallidos. Intenta de nuevo en ${lockStatus.minutesLeft} minuto${lockStatus.minutesLeft === 1 ? '' : 's'}.`);
       return res.redirect('/iniciar-sesion');
     }
@@ -129,7 +144,13 @@ exports.login = async (req, res) => {
     const valid = student ? await Student.verifyPassword(student, password) : false;
 
     if (!valid) {
-      const result = await LoginLockout.recordFailure(lockoutId);
+      const result = await LoginLockout.recordFailureAll(keys);
+      await logAnonymousAccess({
+        actionType: 'student_login_failed',
+        account: student,
+        typed: email,
+        details: result.lockedNow ? 'El acceso quedó bloqueado temporalmente' : null,
+      });
       if (result.lockedNow) {
         req.flash('error', `Demasiados intentos fallidos. Tu acceso quedó bloqueado por ${LoginLockout.LOCK_DURATION_MINUTES} minutos.`);
       } else {
@@ -138,7 +159,7 @@ exports.login = async (req, res) => {
       return res.redirect('/iniciar-sesion');
     }
 
-    await LoginLockout.recordSuccess(lockoutId);
+    await LoginLockout.recordSuccessAll(keys);
 
     req.session.student = {
       id: student.id,
@@ -146,6 +167,7 @@ exports.login = async (req, res) => {
       email: student.email,
       must_change_password: !!student.must_change_password,
     };
+    await logStudent(req, 'student_login', { entityLabel: student.email });
     res.redirect('/mi-cuenta');
   } catch (err) {
     console.error(err);
@@ -154,7 +176,8 @@ exports.login = async (req, res) => {
   }
 };
 
-exports.logout = (req, res) => {
+exports.logout = async (req, res) => {
+  if (req.session && req.session.student) await logStudent(req, 'student_logout');
   delete req.session.student;
   res.redirect('/iniciar-sesion');
 };

@@ -26,6 +26,7 @@
       <label for="q">Buscar</label>
       <input type="text" id="q" name="q" value="<%= filters.q %>" placeholder="Título, autor o ISBN…">
     </div>
+    <% if (modules.categorias) { %>
     <div class="field">
       <label for="category">Categoría</label>
       <select id="category" name="category">
@@ -35,6 +36,7 @@
         <% }) %>
       </select>
     </div>
+    <% } %>
     <div class="field">
       <label for="availability">Estado</label>
       <select id="availability" name="availability">
@@ -53,6 +55,7 @@
   <% if (books.length > 0) { %>
     <div class="bulk-bar" id="bulk-bar">
       <span id="bulk-count">0 seleccionados</span>
+      <% if (modules.categorias) { %>
       <select id="bulk-category-select">
         <option value="">Elegir categoría…</option>
         <% categories.forEach(c => { %>
@@ -60,6 +63,7 @@
         <% }) %>
       </select>
       <button type="button" id="bulk-apply-category" class="btn btn-outline btn-sm">Cambiar categoría</button>
+      <% } %>
       <button type="button" id="bulk-delete-btn" class="btn btn-danger btn-sm">Eliminar seleccionados</button>
     </div>
 
@@ -68,7 +72,7 @@
         <thead>
           <tr>
             <th style="width:36px;"><input type="checkbox" id="select-all" aria-label="Seleccionar todos"></th>
-            <th>Portada</th><th>Título</th><th>Autor</th><th>ISBN</th><th>Categoría</th>
+            <th>Portada</th><th>Título</th><th>Autor</th><th>ISBN</th><% if (modules.categorias) { %><th>Categoría</th><% } %>
             <th>Copias</th><th>Estado</th><th>Acciones</th>
           </tr>
         </thead>
@@ -82,14 +86,14 @@
               <td data-label="Título" class="table-title-cell"><%= b.title %></td>
               <td data-label="Autor"><%= b.author %></td>
               <td data-label="ISBN" style="font-family:var(--font-mono); font-size:0.8rem;"><%= b.isbn %></td>
-              <td data-label="Categoría"><%= b.category %></td>
+              <% if (modules.categorias) { %><td data-label="Categoría"><%= b.category %></td><% } %>
               <td data-label="Copias"><%= b.available_copies %> / <%= b.total_copies %></td>
               <td data-label="Estado"><span class="badge badge-<%= b.status %>"><%= b.status_label %></span></td>
               <td data-label="Acciones">
                 <div class="actions-cell">
                   <a href="/libro/<%= b.id %>" target="_blank" class="btn btn-outline btn-sm">Ver</a>
                   <a href="/admin/books/<%= b.id %>/edit" class="btn btn-outline btn-sm">Editar</a>
-                  <% if (b.available_copies > 0 && !b.library_only) { %>
+                  <% if (modules.prestamos && b.available_copies > 0 && !b.library_only) { %>
                     <a href="/admin/loans/new?book_id=<%= b.id %>" class="btn btn-outline btn-sm">Prestar</a>
                   <% } %>
 
@@ -110,9 +114,11 @@
          envuelven la tabla (los formularios no pueden anidarse en
          HTML, y cada fila ya tiene sus propios formularios de +1/-1). -->
     <form id="bulk-delete-form" action="/admin/books/bulk-delete" method="POST" style="display:none;"></form>
+    <% if (modules.categorias) { %>
     <form id="bulk-category-form" action="/admin/books/bulk-category" method="POST" style="display:none;">
       <input type="hidden" name="category_id" id="bulk-category-hidden-input">
     </form>
+    <% } %>
 
     <% if (totalPages > 1) { %>
       <nav class="pagination" aria-label="Paginación">
@@ -152,11 +158,13 @@
       <h3>Marcar copia no disponible</h3>
       <p>Vas a bajar en 1 las copias disponibles de "<strong id="remove-copy-book-title"></strong>". ¿Por qué motivo?</p>
 
+      <% if (modules.prestamos) { %>
       <div class="modal-actions" style="justify-content:flex-start; flex-wrap:wrap; margin-bottom:14px;">
         <a href="#" id="remove-copy-as-loan" class="btn btn-gold btn-sm">Es un préstamo — ir a registrarlo</a>
       </div>
+      <% } %>
 
-      <a href="#" id="remove-copy-toggle-reason" style="color:var(--forest-700); font-weight:600; font-size:0.88rem;">+ Es otro motivo (dañado, perdido, en reparación…)</a>
+      <a href="#" id="remove-copy-toggle-reason" style="color:var(--forest-700); font-weight:600; font-size:0.88rem;">+ <%= modules.prestamos ? 'Es otro motivo' : 'Escribir el motivo' %> (dañado, perdido, en reparación…)</a>
 
       <form id="remove-copy-form" method="POST" style="margin-top:14px;">
         <input type="hidden" name="amount" value="1">
@@ -183,7 +191,7 @@
 
       <div id="add-copy-loans-list"></div>
 
-      <a href="#" id="add-copy-toggle-reason" style="color:var(--forest-700); font-weight:600; font-size:0.88rem;">+ Es otro motivo (se encontró, copia nueva, corrección…)</a>
+      <a href="#" id="add-copy-toggle-reason" style="color:var(--forest-700); font-weight:600; font-size:0.88rem;">+ <%= modules.prestamos ? 'Es otro motivo' : 'Escribir el motivo' %> (se encontró, copia nueva, corrección…)</a>
 
       <form id="add-copy-form" method="POST" style="margin-top:14px;">
         <input type="hidden" name="amount" value="1">

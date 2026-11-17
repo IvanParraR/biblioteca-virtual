@@ -55,6 +55,21 @@
     </div>
 
     <div class="field">
+      <label for="actorType">Tipo de usuario</label>
+      <select id="actorType" name="actorType">
+        <option value="">Todos</option>
+        <% Object.entries(actorLabels).forEach(([key, label]) => { %>
+          <option value="<%= key %>" <%= filters.actorType === key ? 'selected' : '' %>><%= label %></option>
+        <% }) %>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="ip">Dirección IP</label>
+      <input type="text" id="ip" name="ip" value="<%= filters.ip %>" maxlength="45" placeholder="Ej. 203.0.113.7">
+    </div>
+
+    <div class="field">
       <label for="adminUsername">Administrador</label>
       <select id="adminUsername" name="adminUsername">
         <option value="">Todos</option>
@@ -99,7 +114,7 @@
     <div class="table-wrap">
       <table class="admin-table">
         <thead>
-          <tr><th>Fecha y hora</th><th>Administrador</th><th>Entidad</th><th>Acción</th><th>Deshacer</th></tr>
+          <tr><th>Fecha y hora</th><th>Usuario</th><th>Entidad</th><th>Acción</th><th>IP</th><th>Deshacer</th></tr>
         </thead>
         <tbody>
           <% entries.forEach(e => { %>
@@ -107,12 +122,18 @@
               <td data-label="Fecha y hora" style="font-family:var(--font-mono); font-size:0.8rem; white-space:nowrap;">
                 <%= new Date(e.created_at).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) %>
               </td>
-              <td data-label="Administrador"><strong><%= e.admin_username %></strong></td>
+              <td data-label="Usuario">
+                <strong><%= e.admin_username %></strong>
+                <br><span style="font-size:0.72rem; color:var(--ink-400);"><%= e.actor_type_label %></span>
+              </td>
               <td data-label="Entidad"><span class="badge badge-solo_biblioteca"><%= e.entity_type_label %></span></td>
               <td data-label="Acción">
                 <% if (e.is_revert) { %><span title="Esto fue resultado de deshacer otra acción">↩ </span><% } %>
                 <%= e.action_label %><% if (e.entity_label) { %> "<%= e.entity_label %>"<% } %><% if (e.details) { %> <span style="color:var(--ink-400);">(<%= e.details %>)</span><% } %>
                 <% if (e.undone_at) { %><br><span class="badge badge-no_disponible" style="margin-top:4px;">Deshecho por <%= e.undone_by %></span><% } %>
+              </td>
+              <td data-label="IP" style="font-family:var(--font-mono); font-size:0.78rem;" title="<%= e.user_agent || '' %>">
+                <%= e.ip_address || '—' %>
               </td>
               <td data-label="Deshacer">
                 <% if (e.canUndo) { %>

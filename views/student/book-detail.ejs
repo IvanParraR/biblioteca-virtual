@@ -51,23 +51,25 @@
           <div class="alert" style="background:var(--status-library-bg); color:var(--status-library-fg); margin-top:18px;">Este libro es solo de consulta en sala — no circula.</div>
         <% } else if (book.available_copies > 0) { %>
           <p style="margin-top:18px; color:var(--ink-600); font-size:0.9rem;">Este libro tiene copias disponibles — acércate a la biblioteca para que te lo presten.</p>
-        <% } else if (typeof student !== 'undefined' && student) { %>
+        <% } else if (modules.prestamos && typeof student !== 'undefined' && student) { %>
           <div style="margin-top:18px;">
             <form action="/libro/<%= book.id %>/lista-espera" method="POST" style="margin:0;">
               <button type="submit" class="btn btn-outline">Unirme a la lista de espera</button>
             </form>
           </div>
-        <% } else { %>
+        <% } else if (modules.prestamos) { %>
           <div style="margin-top:18px;">
             <a href="/iniciar-sesion" class="btn btn-outline">Inicia sesión para unirte a la lista de espera</a>
           </div>
         <% } %>
 
         <div class="info-grid">
+          <% if (modules.categorias) { %>
           <div class="info-item">
             <div class="info-label">Categoría</div>
             <div class="info-value"><%= book.category %></div>
           </div>
+          <% } %>
           <div class="info-item">
             <div class="info-label">ISBN</div>
             <div class="info-value"><%= book.isbn %></div>

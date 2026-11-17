@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<%- include('../partials/head') %>
+<body>
+  <%- include('../partials/nav-admin') %>
+
+  <div class="admin-page-head">
+    <div>
+      <h1 style="margin-bottom:2px;">Módulos</h1>
+      <p style="color:var(--ink-600); font-size:0.9rem;">Enciende solo las partes del sitio que esta biblioteca necesita.</p>
+    </div>
+  </div>
+
+  <% if (successMsg && successMsg.length) { %><div class="alert alert-success"><%= successMsg[0] %></div><% } %>
+  <% if (errorMsg && errorMsg.length) { %><div class="alert alert-error"><%= errorMsg[0] %></div><% } %>
+
+  <div class="form-card" style="margin-bottom:24px;">
+    <h2 style="font-size:1.05rem; margin-bottom:6px;">Siempre activos</h2>
+    <p class="field-hint">Panel de administración y Catálogo de libros. Son la base del sitio y no se pueden apagar.</p>
+  </div>
+
+  <form action="/admin/modules" method="POST">
+    <div class="form-card" style="margin-bottom:24px;">
+      <h2 style="font-size:1.05rem; margin-bottom:6px;">Opcionales</h2>
+      <p class="field-hint" style="margin-bottom:18px;">Apagar un módulo lo oculta y bloquea sus páginas, pero no borra sus datos: al encenderlo de nuevo todo sigue ahí.</p>
+
+      <div style="display:flex; flex-direction:column; gap:18px;">
+        <% moduleList.forEach(m => { %>
+          <div>
+            <div class="checkbox-field">
+              <input type="checkbox" id="module_<%= m.key %>" name="<%= m.key %>" <%= m.saved ? 'checked' : '' %>>
+              <label for="module_<%= m.key %>" style="font-size:0.95rem; font-weight:600;"><%= m.name %></label>
+              <% if (m.active) { %>
+                <span class="badge badge-disponible">Encendido</span>
+              <% } else { %>
+                <span class="badge badge-no_disponible">Apagado</span>
+              <% } %>
+            </div>
+            <p class="field-hint" style="margin:4px 0 0 24px;">
+              <%= m.description %>
+              <% if (m.requiresNames.length) { %>Necesita <%= m.requiresNames.join(' y ') %>.<% } %>
+            </p>
+            <% if (m.saved && !m.active) { %>
+              <p class="field-hint" style="margin:4px 0 0 24px; color:var(--status-unavailable-fg);">Está marcado, pero sigue apagado porque <%= m.missingNames.join(' y ') %> está apagado.</p>
+            <% } %>
+          </div>
+        <% }) %>
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-gold">Guardar cambios</button>
+  </form>
+
+  <%- include('../partials/footer-admin') %>
+</body>
+</html>

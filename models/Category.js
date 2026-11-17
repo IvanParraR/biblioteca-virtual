@@ -7,6 +7,10 @@
 const { pool } = require('../config/db');
 
 const Category = {
+  // books.category_id es obligatorio, así que con el módulo de
+  // Categorías apagado los libros nuevos caen en esta categoría.
+  DEFAULT_NAME: 'General',
+
   async all() {
     const [rows] = await pool.query('SELECT * FROM categories ORDER BY name ASC');
     return rows;

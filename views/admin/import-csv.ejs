@@ -17,10 +17,15 @@
   <div class="form-card">
     <h3 style="font-size:1rem; margin-bottom:10px;">Formato esperado del archivo</h3>
     <p style="font-size:0.86rem; color:var(--ink-600); margin-bottom:14px;">
-      La primera fila debe contener los encabezados de columna. Campos obligatorios: <code>title</code>, <code>author</code>, <code>isbn</code>, <code>category</code>.
+      La primera fila debe contener los encabezados de columna. Campos obligatorios: <code>title</code>, <code>author</code>, <code>isbn</code><% if (modules.categorias) { %>, <code>category</code><% } %>.
     </p>
+    <% if (modules.categorias) { %>
     <div class="file-drop" style="text-align:left; margin-bottom:22px; font-family:var(--font-mono); font-size:0.78rem; overflow-x:auto; white-space:pre;">title,author,isbn,category,description,publisher,publication_year,total_copies,location
 El Quijote,Miguel de Cervantes,9788420412146,Literatura,Novela clásica española,Editorial X,1605,3,Estante L-01</div>
+    <% } else { %>
+    <div class="file-drop" style="text-align:left; margin-bottom:22px; font-family:var(--font-mono); font-size:0.78rem; overflow-x:auto; white-space:pre;">title,author,isbn,description,publisher,publication_year,total_copies,location
+El Quijote,Miguel de Cervantes,9788420412146,Novela clásica española,Editorial X,1605,3,Estante L-01</div>
+    <% } %>
 
     <form action="/admin/books/import" method="POST" enctype="multipart/form-data">
       <div class="field field-full" style="margin-bottom:20px;">

@@ -7,7 +7,7 @@
   <div class="container" style="padding-top:32px; padding-bottom:60px;">
     <h1 style="margin-bottom:4px;">Fuentes abiertas</h1>
     <p style="color:var(--ink-600); margin-bottom:22px;">
-      Busca libros y artículos científicos de acceso abierto — con Open Library y OpenAlex/DOAJ. Puedes citar en APA cualquier resultado, y si inicias sesión, guardarlo en tus referencias.
+      Busca libros y artículos científicos de acceso abierto — con Open Library y OpenAlex/DOAJ. Puedes citar en APA cualquier resultado<% if (modules.usuarios) { %>, y si inicias sesión, guardarlo en tus referencias<% } %>.
     </p>
 
     <% if (successMsg && successMsg.length) { %><div class="alert alert-success"><%= successMsg[0] %></div><% } %>
@@ -186,7 +186,7 @@
                         <input type="hidden" name="redirect_back" value="<%= currentUrl %>">
                         <button type="submit" class="btn btn-outline btn-sm">Guardar en mis referencias</button>
                       </form>
-                    <% } else { %>
+                    <% } else if (modules.usuarios) { %>
                       <a href="/iniciar-sesion" class="btn btn-outline btn-sm">Inicia sesión para guardar</a>
                     <% } %>
                   </div>

@@ -34,12 +34,19 @@
             <input type="text" value="<%= student.email %>" disabled style="opacity:0.6;">
             <span class="field-hint">El correo no se puede cambiar desde aquí — contacta a la biblioteca si necesitas actualizarlo.</span>
           </div>
+          <% if (modules.prestamos) { %>
           <div class="field field-full checkbox-field">
             <input type="checkbox" id="notify_due_reminder" name="notify_due_reminder" <%= student.notify_due_reminder ? 'checked' : '' %>>
             <label for="notify_due_reminder" style="text-transform:none;">Avisarme por correo cuando un préstamo esté por vencer</label>
           </div>
+          <% } else if (student.notify_due_reminder) { %>
+            <%# Sin esto, guardar el perfil con Préstamos apagado desactivaría el recordatorio. %>
+            <input type="hidden" name="notify_due_reminder" value="on">
+          <% } %>
         </div>
+        <% if (modules.prestamos) { %>
         <p class="field-hint" style="margin-top:8px;">El comprobante de préstamo y el aviso de lista de espera siempre se envían — solo este recordatorio se puede desactivar.</p>
+        <% } %>
         <button type="submit" class="btn btn-gold" style="margin-top:16px;">Guardar cambios</button>
       </form>
     </div>

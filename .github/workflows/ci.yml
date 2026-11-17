@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      # Detecta errores de sintaxis en cualquier archivo, aunque no
+      # tenga pruebas (no necesita base de datos: solo parsea).
+      - name: Revisar sintaxis de todos los .js
+        run: find . -name "*.js" -not -path "./node_modules/*" -print0 | xargs -0 -n1 node --check
+
+      # Las pruebas no usan MySQL ni ningún servicio externo.
+      - name: Pruebas
+        run: npm test

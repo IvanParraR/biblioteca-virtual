@@ -139,8 +139,11 @@
       </div>
     </div>
 
+    <%# Las secciones de aquí en adelante dependen de módulos: se numeran al vuelo para no saltarse números. %>
+    <% let sectionNumber = 5; %>
+    <% if (modules.prestamos) { %>
     <div class="form-card" style="margin-bottom:24px;">
-      <h2 style="font-size:1.05rem; margin-bottom:6px;">6. Préstamos</h2>
+      <h2 style="font-size:1.05rem; margin-bottom:6px;"><%= ++sectionNumber %>. Préstamos</h2>
       <p class="field-hint" style="margin-bottom:14px;">Duración por defecto al registrar un préstamo nuevo — cada préstamo individual sigue pudiéndose ajustar aparte desde el formulario de "Nuevo préstamo".</p>
       <div class="form-grid">
         <div class="field">
@@ -153,6 +156,11 @@
         </div>
       </div>
     </div>
+    <% } else { %>
+      <%# Sin esto, guardar con Préstamos apagado reiniciaría estos valores a los predeterminados. %>
+      <input type="hidden" name="loan_days_default" value="<%= settings.loan_days_default %>">
+      <input type="hidden" name="max_active_loans" value="<%= settings.max_active_loans %>">
+    <% } %>
 
     <% if (settings.updated_by) { %>
       <p class="field-hint" style="margin-bottom:16px;">
@@ -165,7 +173,7 @@
   </form>
 
   <div class="form-card" style="margin-bottom:24px;">
-    <h2 style="font-size:1.05rem; margin-bottom:6px;">7. Dominios de correo permitidos</h2>
+    <h2 style="font-size:1.05rem; margin-bottom:6px;"><%= ++sectionNumber %>. Dominios de correo permitidos</h2>
     <p class="field-hint" style="margin-bottom:14px;">Solo se pueden crear cuentas de administrador con un correo de estos dominios. Si el colegio tiene correo institucional, elimina los genéricos y deja solo el suyo. Debe quedar al menos uno.</p>
 
     <% if (emailDomains && emailDomains.length > 0) { %>
@@ -190,8 +198,9 @@
     </form>
   </div>
 
+  <% if (modules.usuarios) { %>
   <div class="form-card" style="margin-bottom:24px;">
-    <h2 style="font-size:1.05rem; margin-bottom:6px;">8. Dominios de correo permitidos — Estudiantes</h2>
+    <h2 style="font-size:1.05rem; margin-bottom:6px;"><%= ++sectionNumber %>. Dominios de correo permitidos — Estudiantes</h2>
     <p class="field-hint" style="margin-bottom:14px;">Lista separada de la de administradores — es la principal barrera contra que alguien externo se auto-registre como estudiante. Si el colegio tiene correo institucional para alumnos, déjalo solo a él.</p>
 
     <% if (studentEmailDomains && studentEmailDomains.length > 0) { %>
@@ -215,6 +224,7 @@
       <button type="submit" class="btn btn-primary">Agregar</button>
     </form>
   </div>
+  <% } %>
 
   <%- include('../partials/footer-admin') %>
 </body>

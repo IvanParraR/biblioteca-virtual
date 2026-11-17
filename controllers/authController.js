@@ -3,6 +3,10 @@ const bcrypt = require('bcryptjs');
 const Admin = require('../models/Admin');
 const LoginLockout = require('../models/LoginLockout');
 const EmailConfirmation = require('../models/EmailConfirmation');
+const ActivityLog = require('../models/ActivityLog');
+const { lockoutKeys } = require('../utils/lockoutKeys');
+const { clientIp } = require('../utils/requestContext');
+const { logAnonymousAccess } = require('../utils/auditLog');
 
 const SCHOOL_NAME = () => Settings.get().school_name;
 
@@ -15,14 +19,16 @@ exports.showLogin = (req, res) => {
 
 exports.login = async (req, res) => {
   const { username, password } = req.body;
-  // Un identificador por lo escrito en el campo (usuario o correo,
-  // incluso si no existe) — evita que alguien distinga "usuario
-  // inválido" de "contraseña inválida" a partir del bloqueo.
-  const lockoutId = `login:${(username || '').trim().toLowerCase()}`;
+  // Claves por lo escrito en el campo (usuario o correo, incluso si no
+  // existe) — evita que alguien distinga "usuario inválido" de
+  // "contraseña inválida" a partir del bloqueo. Hay una por pareja
+  // usuario+IP y otra general por usuario (ver utils/lockoutKeys.js).
+  const keys = lockoutKeys('login', username, clientIp(req));
 
   try {
-    const lockStatus = await LoginLockout.check(lockoutId);
+    const lockStatus = await LoginLockout.checkAny(keys);
     if (lockStatus.locked) {
+      await logAnonymousAccess({ actionType: 'admin_login_blocked', typed: username });
       req.flash('error', `Demasiados intentos fallidos. Intenta de nuevo en ${lockStatus.minutesLeft} minuto${lockStatus.minutesLeft === 1 ? '' : 's'}.`);
       return res.redirect('/admin/login');
     }
@@ -41,7 +47,13 @@ exports.login = async (req, res) => {
     const valid = admin ? await bcrypt.compare(password, admin.password_hash) : false;
 
     if (!valid) {
-      const result = await LoginLockout.recordFailure(lockoutId);
+      const result = await LoginLockout.recordFailureAll(keys);
+      await logAnonymousAccess({
+        actionType: 'admin_login_failed',
+        account: admin,
+        typed: username,
+        details: result.lockedNow ? 'El acceso quedó bloqueado temporalmente' : null,
+      });
       if (result.lockedNow) {
         req.flash('error', `Demasiados intentos fallidos. Tu acceso quedó bloqueado por ${LoginLockout.LOCK_DURATION_MINUTES} minutos.`);
       } else {
@@ -50,7 +62,7 @@ exports.login = async (req, res) => {
       return res.redirect('/admin/login');
     }
 
-    await LoginLockout.recordSuccess(lockoutId);
+    await LoginLockout.recordSuccessAll(keys);
 
     req.session.admin = {
       id: admin.id,
@@ -59,6 +71,13 @@ exports.login = async (req, res) => {
       can_manage_admins: !!admin.can_manage_admins,
       must_change_password: !!admin.must_change_password,
     };
+    await ActivityLog.log({
+      adminId: admin.id,
+      adminUsername: admin.username,
+      actorType: 'admin',
+      actionType: 'admin_login',
+      entityLabel: admin.username,
+    });
     res.redirect('/admin/dashboard');
   } catch (err) {
     console.error(err);
@@ -90,7 +109,17 @@ exports.confirmEmail = async (req, res) => {
   }
 };
 
-exports.logout = (req, res) => {
+exports.logout = async (req, res) => {
+  const current = req.session && req.session.admin;
+  if (current) {
+    await ActivityLog.log({
+      adminId: current.id,
+      adminUsername: current.username,
+      actorType: 'admin',
+      actionType: 'admin_logout',
+      entityLabel: current.username,
+    });
+  }
   req.session.destroy(() => {
     res.redirect('/admin/login');
   });

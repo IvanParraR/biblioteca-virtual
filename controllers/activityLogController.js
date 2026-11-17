@@ -10,7 +10,7 @@ exports.list = async (req, res) => {
   try {
     const {
       timeRange, dateFrom, dateTo, specificDate,
-      actionType, adminUsername, entityType,
+      actionType, adminUsername, entityType, actorType, ip,
       sort, order, page,
     } = req.query;
 
@@ -23,6 +23,8 @@ exports.list = async (req, res) => {
         actionType: actionType || '',
         adminUsername: adminUsername || '',
         entityType: entityType || '',
+        actorType: actorType || '',
+        ip: (ip || '').trim(),
         sort: sort || 'created_at',
         order: order || 'desc',
         page: parseInt(page, 10) || 1,
@@ -58,6 +60,7 @@ exports.list = async (req, res) => {
       admins,
       actionTypes: ActivityLog.ACTION_TYPES,
       entityLabels: ActivityLog.ENTITY_LABELS,
+      actorLabels: ActivityLog.ACTOR_LABELS,
       filters: {
         timeRange: timeRange || '',
         dateFrom: dateFrom || '',
@@ -66,6 +69,8 @@ exports.list = async (req, res) => {
         actionType: actionType || '',
         adminUsername: adminUsername || '',
         entityType: entityType || '',
+        actorType: actorType || '',
+        ip: (ip || '').trim(),
         sort: sort || 'created_at',
         order: order || 'desc',
       },

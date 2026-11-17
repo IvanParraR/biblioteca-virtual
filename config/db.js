@@ -44,4 +44,21 @@ async function testConnection() {
   }
 }
 
-module.exports = { pool, testConnection };
+// Al arrancar en Railway, MySQL a veces tarda unos segundos más que la
+// app en aceptar conexiones. Antes de migrar se reintenta unas veces en
+// vez de rendirse al primer intento. Devuelve true si logró conectar.
+async function waitForConnection({ retries = 6, delayMs = 3000 } = {}) {
+  for (let attempt = 1; attempt <= retries; attempt += 1) {
+    try {
+      const conn = await pool.getConnection();
+      conn.release();
+      return true;
+    } catch (err) {
+      console.warn(`⚠️  MySQL aún no responde (intento ${attempt}/${retries}): ${err.code || err.message}`);
+      if (attempt < retries) await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+  return false;
+}
+
+module.exports = { pool, testConnection, waitForConnection };

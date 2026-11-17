@@ -16,6 +16,7 @@
 //     nueva entrada en el historial (nunca se borra la original).
 // ============================================================
 const { pool } = require('../config/db');
+const requestContext = require('../utils/requestContext');
 
 const SELF_UNDO_WINDOW_MS = 15 * 60 * 1000; // 15 minutos
 const ASSISTED_UNDO_WINDOW_MS = 48 * 60 * 60 * 1000; // 48 horas
@@ -47,10 +48,36 @@ const ACTION_TYPES = {
   book_bulk_deleted: { label: 'Eliminó en lote', entity_type: 'book' },
   book_bulk_category_changed: { label: 'Cambió la categoría en lote de', entity_type: 'book' },
   site_settings_updated: { label: 'Actualizó la configuración del sitio', entity_type: 'settings' },
+  modules_updated: { label: 'Cambió los módulos del sitio', entity_type: 'settings' },
   loan_created: { label: 'Registró el préstamo de', entity_type: 'loan' },
   loan_returned: { label: 'Registró la devolución de', entity_type: 'loan' },
   loan_renewed: { label: 'Renovó el préstamo de', entity_type: 'loan' },
   loans_exported: { label: 'Exportó el historial de préstamos', entity_type: 'loan' },
+
+  // --- Sesiones y acceso (administradores) ---
+  admin_login: { label: 'Inició sesión', entity_type: 'session' },
+  admin_logout: { label: 'Cerró sesión', entity_type: 'session' },
+  admin_login_failed: { label: 'Intento de acceso fallido (administrador)', entity_type: 'session' },
+  admin_login_blocked: { label: 'Intento de acceso bloqueado por demasiados fallos (administrador)', entity_type: 'session' },
+  admin_password_recovered: { label: 'Restableció su contraseña con la pregunta de seguridad', entity_type: 'session' },
+
+  // --- Estudiantes ---
+  student_registered: { label: 'Se registró como estudiante', entity_type: 'student' },
+  student_login: { label: 'Inició sesión (estudiante)', entity_type: 'session' },
+  student_logout: { label: 'Cerró sesión (estudiante)', entity_type: 'session' },
+  student_login_failed: { label: 'Intento de acceso fallido (estudiante)', entity_type: 'session' },
+  student_login_blocked: { label: 'Intento de acceso bloqueado por demasiados fallos (estudiante)', entity_type: 'session' },
+  student_password_changed: { label: 'Cambió su contraseña (estudiante)', entity_type: 'student' },
+  student_waitlist_joined: { label: 'Se anotó en la lista de espera de', entity_type: 'waitlist' },
+  student_waitlist_left: { label: 'Salió de la lista de espera', entity_type: 'waitlist' },
+  student_reference_deleted: { label: 'Eliminó una referencia guardada', entity_type: 'reference' },
+};
+
+// Quién hizo la acción (columna actor_type).
+const ACTOR_LABELS = {
+  admin: 'Administrador',
+  student: 'Estudiante',
+  anonymous: 'Sin sesión',
 };
 
 const ENTITY_LABELS = {
@@ -60,6 +87,9 @@ const ENTITY_LABELS = {
   settings: 'Configuración',
   loan: 'Préstamo',
   student: 'Estudiante',
+  session: 'Sesión',
+  waitlist: 'Lista de espera',
+  reference: 'Referencia',
 };
 
 // Únicamente estas acciones son "seguras" de deshacer: cambian un
@@ -100,6 +130,7 @@ const REVERT_ACTION_MAP = {
 const ActivityLog = {
   ACTION_TYPES,
   ENTITY_LABELS,
+  ACTOR_LABELS,
   UNDOABLE_ACTIONS,
   REVERT_ACTION_MAP,
   SELF_UNDO_WINDOW_MS,
@@ -111,23 +142,34 @@ const ActivityLog = {
   // beforeState: objeto plano con el estado anterior (o null si la
   // acción fue una creación). entityId: id numérico de la fila
   // afectada en su tabla real (books/categories/admins).
-  async log({ adminId, adminUsername, actionType, entityId, entityLabel, details, beforeState, isRevert }) {
+  //
+  // Nuevos campos (todos opcionales, los llamados existentes siguen igual):
+  //  - actorType: 'admin' (por defecto), 'student' o 'anonymous'.
+  //  - studentId: id del estudiante cuando actorType = 'student'.
+  //  - ip / userAgent: si no se pasan, se toman de la petición en curso
+  //    (utils/requestContext.js), así TODA acción queda con su IP.
+  async log({ adminId, adminUsername, actionType, entityId, entityLabel, details, beforeState, isRevert, actorType, studentId, ip, userAgent }) {
     try {
       const meta = ACTION_TYPES[actionType];
       const entityType = meta ? meta.entity_type : 'other';
       const undoable = UNDOABLE_ACTIONS.has(actionType) && entityId != null;
+      const ctx = requestContext.current();
       const [result] = await pool.query(
         `INSERT INTO activity_log
-          (admin_id, admin_username, action_type, entity_type, entity_id, entity_label, details, before_state, is_undoable, is_revert)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          (admin_id, actor_type, student_id, admin_username, action_type, entity_type, entity_id, entity_label, details, ip_address, user_agent, before_state, is_undoable, is_revert)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           adminId || null,
-          adminUsername,
+          actorType || 'admin',
+          studentId || null,
+          String(adminUsername || '(desconocido)').slice(0, 100),
           actionType,
           entityType,
           entityId != null ? entityId : null,
-          entityLabel || null,
-          details || null,
+          entityLabel ? String(entityLabel).slice(0, 255) : null,
+          details ? String(details).slice(0, 500) : null,
+          (ip !== undefined ? ip : ctx.ip) || null,
+          (userAgent !== undefined ? userAgent : ctx.userAgent) || null,
           beforeState !== undefined && beforeState !== null ? JSON.stringify(beforeState) : null,
           undoable ? 1 : 0,
           isRevert ? 1 : 0,
@@ -188,9 +230,28 @@ const ActivityLog = {
     return { ok: false, reason: 'Pasó demasiado tiempo para deshacer esta acción.' };
   },
 
+  // Retención de datos personales: los eventos de sesión (login, logout,
+  // fallos) se borran pasados `days` días, y la IP y el navegador de TODO
+  // el historial se anonimizan (se dejan en NULL) — el registro de qué se
+  // hizo y quién lo hizo se conserva. Mínimo 30 días.
+  async purgeOldEvents(days = 180) {
+    const keepDays = Math.max(30, Number(days) || 180);
+    const [deleted] = await pool.query(
+      "DELETE FROM activity_log WHERE entity_type = 'session' AND created_at < DATE_SUB(NOW(), INTERVAL ? DAY)",
+      [keepDays]
+    );
+    const [anonymized] = await pool.query(
+      `UPDATE activity_log SET ip_address = NULL, user_agent = NULL
+       WHERE created_at < DATE_SUB(NOW(), INTERVAL ? DAY)
+         AND (ip_address IS NOT NULL OR user_agent IS NOT NULL)`,
+      [keepDays]
+    );
+    return { deleted: deleted.affectedRows, anonymized: anonymized.affectedRows, keepDays };
+  },
+
   async distinctAdmins() {
     const [rows] = await pool.query(
-      'SELECT DISTINCT admin_username FROM activity_log ORDER BY admin_username ASC'
+      "SELECT DISTINCT admin_username FROM activity_log WHERE actor_type = 'admin' ORDER BY admin_username ASC"
     );
     return rows.map((r) => r.admin_username);
   },
@@ -216,7 +277,7 @@ const ActivityLog = {
 
   async search({
     timeRange, dateFrom, dateTo, specificDate,
-    actionType, adminUsername, entityType,
+    actionType, adminUsername, entityType, actorType, ip,
     sort = 'created_at', order = 'desc',
     page = 1, perPage = 20,
   } = {}) {
@@ -229,6 +290,8 @@ const ActivityLog = {
     if (actionType) { where.push('action_type = ?'); values.push(actionType); }
     if (adminUsername) { where.push('admin_username = ?'); values.push(adminUsername); }
     if (entityType) { where.push('entity_type = ?'); values.push(entityType); }
+    if (actorType && ACTOR_LABELS[actorType]) { where.push('actor_type = ?'); values.push(actorType); }
+    if (ip) { where.push('ip_address = ?'); values.push(ip); }
 
     const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
     const sortCol = sort === 'admin_username' ? 'admin_username' : 'created_at';
@@ -249,6 +312,7 @@ const ActivityLog = {
       ...r,
       action_label: (ACTION_TYPES[r.action_type] || {}).label || r.action_type,
       entity_type_label: ENTITY_LABELS[r.entity_type] || r.entity_type,
+      actor_type_label: ACTOR_LABELS[r.actor_type] || r.actor_type,
     }));
 
     return { entries, total, totalPages, currentPage, perPage };

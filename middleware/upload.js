@@ -9,6 +9,8 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const sharp = require('sharp');
+const { userError } = require('../utils/userError');
+const { isSvgSafe } = require('../utils/svgSafety');
 
 const coversDir = path.join(__dirname, '..', 'public', 'uploads', 'covers');
 const csvDir = path.join(__dirname, '..', 'public', 'uploads', 'csv');
@@ -31,7 +33,7 @@ const coverUpload = multer({
   fileFilter: (req, file, cb) => {
     const allowed = /jpeg|jpg|png|webp|svg/;
     const ok = allowed.test(path.extname(file.originalname).toLowerCase());
-    cb(ok ? null : new Error('Formato de imagen no permitido. Usa JPG, PNG, WEBP o SVG.'), ok);
+    cb(ok ? null : userError('Formato de imagen no permitido. Usa JPG, PNG, WEBP o SVG.'), ok);
   },
 });
 
@@ -53,6 +55,7 @@ async function processCoverImage(req, res, next) {
     const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
 
     if (ext === '.svg') {
+      if (!isSvgSafe(req.file.buffer)) return next(userError('El SVG contiene elementos no permitidos (scripts, eventos o enlaces externos). Usa otro archivo o conviértelo a PNG.'));
       const filename = `${unique}.svg`;
       await fs.promises.writeFile(path.join(coversDir, filename), req.file.buffer);
       req.file.filename = filename;
@@ -92,7 +95,7 @@ const logoUpload = multer({
   fileFilter: (req, file, cb) => {
     const allowed = /jpeg|jpg|png|webp|svg/;
     const ok = allowed.test(path.extname(file.originalname).toLowerCase());
-    cb(ok ? null : new Error('Formato de imagen no permitido. Usa JPG, PNG, WEBP o SVG.'), ok);
+    cb(ok ? null : userError('Formato de imagen no permitido. Usa JPG, PNG, WEBP o SVG.'), ok);
   },
 });
 
@@ -104,6 +107,7 @@ async function processLogoImage(req, res, next) {
     const unique = `logo-${Date.now()}-${Math.round(Math.random() * 1e9)}`;
 
     if (ext === '.svg') {
+      if (!isSvgSafe(req.file.buffer)) return next(userError('El SVG contiene elementos no permitidos (scripts, eventos o enlaces externos). Usa otro archivo o conviértelo a PNG.'));
       const filename = `${unique}.svg`;
       await fs.promises.writeFile(path.join(brandingDir, filename), req.file.buffer);
       req.file.filename = filename;
@@ -139,7 +143,7 @@ const csvUpload = multer({
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
   fileFilter: (req, file, cb) => {
     const ok = path.extname(file.originalname).toLowerCase() === '.csv';
-    cb(ok ? null : new Error('Solo se permiten archivos .csv'), ok);
+    cb(ok ? null : userError('Solo se permiten archivos .csv'), ok);
   },
 });
 

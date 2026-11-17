@@ -6,6 +6,7 @@ const Waitlist = require('../models/Waitlist');
 const SavedReference = require('../models/SavedReference');
 const { isPasswordValid, passwordHint } = require('../utils/passwordPolicy');
 const { isPhoneValid, isGradeValid, GRADES } = require('../utils/validators');
+const { logStudent } = require('../utils/auditLog');
 
 const SCHOOL_NAME = () => Settings.get().school_name;
 
@@ -130,6 +131,7 @@ exports.changePassword = async (req, res) => {
     }
 
     await Student.setPassword(student.id, new_password);
+    await logStudent(req, 'student_password_changed', { entityId: student.id, entityLabel: student.email });
     req.session.student.must_change_password = false;
     req.flash('success', 'Contraseña actualizada.');
     res.redirect('/mi-cuenta');
@@ -167,6 +169,7 @@ exports.joinWaitlist = async (req, res) => {
       return res.redirect(`/libro/${req.params.id}`);
     }
     await Waitlist.join(req.params.id, req.session.student.id);
+    await logStudent(req, 'student_waitlist_joined', { entityId: Number(req.params.id), entityLabel: book.title });
     req.flash('success', `Te anotamos en la lista de espera de "${book.title}" — te avisamos por correo cuando te toque.`);
   } catch (err) {
     req.flash('error', err.code === 'ALREADY_WAITING' ? err.message : (err.message || 'No se pudo unir a la lista de espera.'));
@@ -177,6 +180,7 @@ exports.joinWaitlist = async (req, res) => {
 exports.cancelWaitlist = async (req, res) => {
   try {
     await Waitlist.cancel(req.params.id, req.session.student.id);
+    await logStudent(req, 'student_waitlist_left', { entityId: Number(req.params.id) });
     req.flash('success', 'Saliste de la lista de espera.');
   } catch (err) {
     console.error(err);
@@ -205,6 +209,7 @@ exports.references = async (req, res) => {
 exports.deleteReference = async (req, res) => {
   try {
     await SavedReference.delete(req.params.id, req.session.student.id);
+    await logStudent(req, 'student_reference_deleted', { entityId: Number(req.params.id) });
     req.flash('success', 'Referencia eliminada.');
   } catch (err) {
     console.error(err);

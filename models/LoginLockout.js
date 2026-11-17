@@ -39,7 +39,7 @@ const LoginLockout = {
 
   // Registra un intento fallido. Si alcanza el máximo, activa el
   // bloqueo por LOCK_DURATION_MINUTES a partir de ahora.
-  async recordFailure(identifier) {
+  async recordFailure(identifier, maxAttempts = MAX_ATTEMPTS) {
     await pool.query(
       `INSERT INTO login_lockouts (identifier, failed_count, last_attempt_at)
        VALUES (?, 1, NOW())
@@ -47,18 +47,47 @@ const LoginLockout = {
          failed_count = failed_count + 1,
          last_attempt_at = NOW(),
          locked_until = IF(failed_count >= ?, DATE_ADD(NOW(), INTERVAL ? MINUTE), locked_until)`,
-      [identifier, MAX_ATTEMPTS, LOCK_DURATION_MINUTES]
+      [identifier, maxAttempts, LOCK_DURATION_MINUTES]
     );
 
     const [rows] = await pool.query('SELECT failed_count, locked_until FROM login_lockouts WHERE identifier = ?', [identifier]);
     const row = rows[0] || { failed_count: 1, locked_until: null };
-    const attemptsLeft = Math.max(0, MAX_ATTEMPTS - row.failed_count);
+    const attemptsLeft = Math.max(0, maxAttempts - row.failed_count);
     return { failedCount: row.failed_count, attemptsLeft, lockedNow: !!row.locked_until };
   },
 
   // Un intento exitoso limpia por completo el historial de fallos.
   async recordSuccess(identifier) {
     await pool.query('DELETE FROM login_lockouts WHERE identifier = ?', [identifier]);
+  },
+
+  // ---- Varias claves a la vez (usuario+IP y usuario; ver utils/lockoutKeys.js) ----
+
+  // Devuelve el primer bloqueo vigente entre las claves, o { locked: false }.
+  async checkAny(keys) {
+    for (const key of keys) {
+      const status = await LoginLockout.check(key.id);
+      if (status.locked) return status;
+    }
+    return { locked: false };
+  },
+
+  // Suma un fallo a todas las claves. attemptsLeft se calcula sobre la
+  // pareja usuario+IP (la que el usuario "siente"); lockedNow es true si
+  // cualquiera de las claves quedó bloqueada con este intento.
+  async recordFailureAll(keys) {
+    let attemptsLeft = 0;
+    let lockedNow = false;
+    for (const key of keys) {
+      const result = await LoginLockout.recordFailure(key.id, key.max);
+      if (key.scope === 'pair') attemptsLeft = result.attemptsLeft;
+      if (result.lockedNow) lockedNow = true;
+    }
+    return { attemptsLeft, lockedNow };
+  },
+
+  async recordSuccessAll(keys) {
+    for (const key of keys) await LoginLockout.recordSuccess(key.id);
   },
 };
 

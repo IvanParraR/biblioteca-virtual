@@ -7,10 +7,21 @@ Aplicación completa (Node.js + Express + MySQL) para la consulta y gestión del
 2. Instalación
 3. Configuración de la base de datos
 4. Conectar la base de datos real del colegio
-5. Estructura del proyecto
-6. Cuenta de administrador de prueba
-7. Importación masiva por CSV
-8. Próximos pasos sugeridos
+5. Categorías normalizadas (evita duplicados)
+6. Copias totales vs. copias disponibles
+7. Estructura del proyecto
+8. Primer administrador
+9. Historial de actividad (auditoría)
+10. Protección contra fuerza bruta
+11. Información general (solo gestores)
+12. Acciones masivas en la tabla de libros
+13. Portadas optimizadas automáticamente
+14. Exportar el catálogo (Excel / PDF)
+15. Importación masiva por CSV
+16. Módulos
+17. Seguridad en producción
+18. Pruebas automáticas
+19. Próximos pasos sugeridos
 
 ---
 
@@ -61,6 +72,18 @@ npm run dev
 
 Abre `http://localhost:3000` para la vista de estudiante y `http://localhost:3000/admin/login` para el panel de administración.
 
+### Migraciones automáticas
+
+Los cambios de esquema **nuevos** viven en `database/migrations/` (`001_...sql`, `002_...sql`, …) y **se aplican solos al arrancar la app**, en orden, una sola vez cada uno. La app anota cuáles ya corrieron en la tabla `schema_migrations`, así que no hay que ejecutar nada a mano ni en local ni en Railway.
+
+- Si una migración falla, la app **no arranca** (y en Railway el deploy no pasa el healthcheck, así que la versión anterior sigue en línea). El motivo queda en el log.
+- Una migración ya aplicada no se edita: los cambios nuevos van en un archivo nuevo (si cambia su contenido, el log avisa).
+- Para agregar una: crea `database/migrations/NNN_descripcion.sql` con el número siguiente. Si una sentencia falla porque la columna, índice o tabla ya existe, se da por hecha y se continúa.
+- Para desactivarlas (por ejemplo, para correr el SQL a mano): variable `RUN_MIGRATIONS=false`.
+- **Los `migrate_*.sql` antiguos no los toca el ejecutor**: asume que la base ya los tiene. Una base **nueva** necesita `schema.sql` y los `migrate_*.sql` una sola vez (como en las secciones 4 a 16), y desde ahí el ejecutor se encarga de lo demás.
+
+---
+
 ## 4. Conectar la base de datos real del colegio
 
 Este prototipo fue diseñado para conectarse fácilmente a la base de datos MySQL existente del colegio:
@@ -106,11 +129,14 @@ biblioteca-virtual/
 ├── config/db.js                    # Pool de conexión MySQL
 ├── database/
 │   ├── schema.sql                  # Esquema + datos de ejemplo
-│   ├── migrate_admin_permissions.sql  # Migración: permisos de administradores
-│   └── migrate_categories.sql      # Migración: normaliza categorías
+│   ├── migrate_*.sql               # Migraciones antiguas (se corren a mano, una vez)
+│   └── migrations/                 # Migraciones nuevas: se aplican solas al arrancar
 ├── middleware/
 │   ├── auth.js                     # Protección de rutas de administrador
-│   └── upload.js                   # Subida de portadas y CSV (Multer)
+│   ├── upload.js                   # Subida de portadas y CSV (Multer)
+│   ├── security.js                 # helmet/CSP, anti-CSRF (Origin), SESSION_SECRET
+│   ├── rateLimit.js                # Límite de intentos por IP (login, registro, recuperación)
+│   └── errorHandler.js             # Errores sin filtrar mensajes internos
 ├── models/
 │   ├── Book.js                     # Consultas SQL sobre libros
 │   ├── Category.js                 # Consultas SQL sobre categorías
@@ -118,24 +144,31 @@ biblioteca-virtual/
 ├── controllers/                     # Lógica de cada ruta
 ├── routes/                          # Definición de endpoints
 ├── views/                           # Plantillas EJS (estudiante + admin)
+├── utils/                           # Utilidades: migraciones, contraseñas, bloqueo, auditoría...
+├── tests/                           # Pruebas automáticas (node:test, sin base de datos)
 └── public/
     ├── css/style.css                # Sistema de diseño
     ├── js/                          # JS progresivo (modal, filtros)
     └── uploads/covers/              # Portadas subidas por el administrador
 ```
 
-## 8. Cuenta de administrador de prueba
+## 8. Primer administrador
+
+Ya **no existe ninguna cuenta con contraseña conocida**. Al arrancar, si la tabla `admins` está vacía, la app crea el primer gestor con estas variables (en `.env` en local; en Railway, en las variables del servicio):
 
 ```
-Usuario:     admin
-Contraseña:  biblioteca123
+INITIAL_ADMIN_USERNAME=un-usuario        # 3 a 100 caracteres: letras, números, . _ -
+INITIAL_ADMIN_PASSWORD=Una-Clave#2026    # 8+ caracteres, con mayúscula, número y carácter especial
+INITIAL_ADMIN_NAME=Nombre Apellido       # opcional
 ```
 
-⚠️ Cambia esta contraseña antes de usar la aplicación en producción (puedes generar un nuevo hash con `bcryptjs` y actualizarlo directamente en la tabla `admins`).
+Esa persona **debe cambiar la contraseña en su primer ingreso**. Una vez creada la cuenta puedes borrar las variables: si ya existe cualquier administrador, no se vuelven a usar. Si no hay administradores y faltan las variables, el log del servidor lo avisa.
+
+**Si tu base ya tenía el admin `admin / biblioteca123`** (instalaciones anteriores): la migración 003 obliga a cambiar esa contraseña en el próximo ingreso y borra su pregunta de seguridad pública (la respuesta estaba escrita en el repositorio). Entra, cambia la contraseña y define tu propia pregunta en *Mi cuenta*. O crea otro gestor y elimina `admin`.
 
 ### Gestión de otras cuentas de administrador
 
-Solo la cuenta semilla (`admin`) tiene permiso de gestionar otras cuentas desde el inicio (columna `can_manage_admins = 1`). Desde **Panel de administración → Administradores** (visible solo para cuentas con ese permiso) se puede:
+Solo la cuenta del primer administrador tiene permiso de gestionar otras cuentas desde el inicio (columna `can_manage_admins = 1`). Desde **Panel de administración → Administradores** (visible solo para cuentas con ese permiso) se puede:
 
 - Crear nuevas cuentas de administrador (por defecto, **sin** permiso de gestión — solo pueden administrar el catálogo de libros).
 - Otorgar o quitar el permiso de gestión a otras cuentas.
@@ -242,14 +275,29 @@ Get-Content database/migrate_activity_log.sql | & "C:\Program Files\MySQL\MySQL 
 
 El historial empieza vacío desde el momento en que se aplica la migración — no reconstruye actividad pasada, ya que esa información no existía antes.
 
+### Accesos y acciones de estudiantes (con IP y navegador)
+
+Además de las acciones sobre libros, categorías, cuentas, préstamos y configuración, el historial registra:
+
+- **Accesos de administradores:** inicio de sesión, cierre de sesión, intentos fallidos, intentos bloqueados por demasiados fallos y restablecimiento de contraseña con la pregunta de seguridad.
+- **Estudiantes:** registro, inicio y cierre de sesión, intentos fallidos o bloqueados, cambio de contraseña, anotarse o salir de la lista de espera y eliminar una referencia guardada.
+- **IP y navegador (user-agent)** de **cada** acción, no solo de los accesos. En la tabla, la IP aparece en su columna (el navegador, al pasar el cursor) y se puede filtrar por **tipo de usuario** (administrador / estudiante / sin sesión) y por **dirección IP**.
+- En un intento fallido, el nombre escrito solo se guarda si parece un usuario o correo (sin espacios, hasta 64 caracteres); si no, queda como "(no válido)" para no guardar sin querer una contraseña pegada en ese campo.
+
+**Retención de datos personales.** La IP y el navegador son datos personales (y los estudiantes pueden ser menores). Cada 24 horas la app borra los eventos de sesión con más de **180 días** y deja en blanco la IP y el navegador de todo el historial anterior a esa fecha; el registro de *qué* se hizo y *quién* lo hizo se conserva. Se ajusta con `LOG_RETENTION_DAYS` (mínimo 30).
+
+---
+
 ## 10. Protección contra fuerza bruta
 
 El login de administrador y la verificación de la pregunta de seguridad (paso 2 de "olvidé mi contraseña") se bloquean temporalmente tras **5 intentos fallidos seguidos**, por **15 minutos**. Mientras dura el bloqueo, ni siquiera la contraseña o respuesta correcta funciona — hay que esperar a que pase el tiempo.
 
 Detalles de la implementación:
 - El login y la pregunta de seguridad tienen contadores **independientes**: agotar los intentos en uno no bloquea el otro.
-- El identificador de bloqueo es el nombre de usuario escrito (exista o no la cuenta), para que no se pueda distinguir "usuario inválido" de "contraseña inválida" observando el comportamiento del bloqueo.
-- Un intento **exitoso** borra por completo el historial de fallos de ese identificador.
+- El bloqueo se cuenta por **usuario + IP** (5 fallos) y, además, hay un tope general por usuario desde cualquier IP (20 fallos). Así nadie puede bloquear a propósito la cuenta de un administrador escribiéndola mal 5 veces: solo se bloquea su propia conexión. Aplica al login de administrador, a la pregunta de seguridad y al login de estudiante.
+- Se usa el nombre escrito exista o no la cuenta, para que no se pueda distinguir "usuario inválido" de "contraseña inválida" observando el comportamiento del bloqueo.
+- Complementa al límite por IP de la sección 17, que corta por origen sin importar el usuario.
+- Un intento **exitoso** borra por completo el historial de fallos de ese usuario.
 - Pasados los 15 minutos, el siguiente intento reinicia el contador desde cero automáticamente.
 - El mensaje de error muestra cuántos intentos quedan antes del bloqueo, y cuántos minutos faltan mientras está bloqueado.
 
@@ -336,10 +384,89 @@ El Quijote,Miguel de Cervantes,9788420412146,Literatura,Novela clásica español
 
 Campos obligatorios: `title`, `author`, `isbn`, `category`. Los demás son opcionales.
 
-## 16. Próximos pasos sugeridos
+## 16. Módulos
 
-- Implementar el flujo completo de préstamos (solicitud, devolución, historial).
-- Agregar recuperación de contraseña para administradores.
-- Exportar el catálogo o reportes en PDF/Excel.
-- Roles adicionales (bibliotecario vs. administrador general).
-- Notificaciones de vencimiento cuando se active el módulo de préstamos.
+Desde **Panel de administración → Módulos** (solo cuentas con permiso de gestión) se enciende o apaga cada parte opcional del sitio, sin reiniciar el servidor. **Admin** y **Catálogo** son la base y no se pueden apagar.
+
+| Módulo | Qué se apaga |
+| --- | --- |
+| **Usuarios** | Registro, inicio de sesión, "Mi cuenta" y la sección Estudiantes del panel. También apaga Préstamos, que lo necesita. |
+| **Préstamos** | Préstamos y devoluciones, lista de espera, recordatorios por correo y sus estadísticas. |
+| **Fuentes abiertas** | La búsqueda en fuentes abiertas y "Mis referencias". |
+| **Categorías** | La página de categorías, los filtros, la columna en exportaciones y su gestión en el panel. |
+
+Apagar un módulo **no borra sus datos**: oculta sus enlaces y bloquea sus rutas (404 en el sitio público, aviso en el panel). Al encenderlo de nuevo todo sigue ahí.
+
+Con **Categorías** apagado, los libros nuevos quedan en una categoría llamada "General", porque cada libro necesita una en la base de datos. Los libros existentes conservan la suya, y esa categoría "General" se verá si el módulo se vuelve a encender.
+
+Con **Préstamos** apagado, los préstamos activos dejan de recibir recordatorios y sus copias siguen contando como no disponibles hasta que se encienda el módulo y se registre la devolución (o se ajusten con +1).
+
+Para agregar un módulo nuevo: se declara en `models/Modules.js`, se protegen sus rutas con `requireModule('clave')` y se ocultan sus enlaces en las vistas con `modules.clave`.
+
+**Si ya tenías el proyecto instalado antes de esta función**, ejecuta la migración (mientras no se corra, todos los módulos siguen encendidos y no se pueden apagar):
+
+```bash
+mysql -u root -p biblioteca_virtual < database/migrate_modules.sql
+```
+
+En PowerShell (Windows):
+
+```powershell
+Get-Content database/migrate_modules.sql | & "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -u root -p biblioteca_virtual
+```
+
+## 17. Seguridad en producción
+
+Todo lo de esta sección funciona sin cambios en la base de datos.
+
+**Variables que importan en Railway** (ver `.env.example`):
+
+| Variable | Qué hace |
+|---|---|
+| `SESSION_SECRET` | **Obligatoria en producción.** Si falta, es el valor de ejemplo o tiene menos de 16 caracteres, la app no arranca y lo dice en el log. |
+| `APP_URL` | URL pública. Además de armar los enlaces de los correos, se acepta como origen válido en la protección anti-CSRF. |
+| `CSP_ENFORCE` | `false` (por defecto) = la CSP solo reporta; `true` = la CSP bloquea. Ver abajo. |
+
+**Qué hay activo:**
+
+- **Cabeceras con `helmet`** (nosniff, anti-clickjacking, HSTS por HTTPS, etc.). El `Referrer-Policy` se fija en `strict-origin-when-cross-origin`: con el `no-referrer` por defecto de helmet el navegador omitiría `Origin` en los formularios y la protección anti-CSRF los rechazaría.
+- **CSP en modo solo reporte.** Las vistas usan scripts y estilos en línea, así que no se activa a ciegas. Para activarla: abre en el navegador las pantallas públicas y las de administración con la consola (F12) abierta; si no aparecen mensajes `[Report Only] Refused to...`, pon `CSP_ENFORCE=true` en Railway. Si aparece alguno, ajusta `helmetOptions()` en `middleware/security.js` antes de activarla.
+- **Cookie de sesión** `httpOnly`, `sameSite=lax` y `secure` automática bajo HTTPS.
+- **Sesiones en MySQL** (tabla `sessions`, migración 002, librería `express-mysql-session`): un reinicio o un deploy ya no cierra la sesión de todos. Las vencidas se limpian solas cada 15 minutos. Si MySQL está caído, el sitio no puede validar sesiones (antes seguía funcionando solo con memoria).
+- **Anti-CSRF por `Origin`/`Referer`.** Toda petición que modifica datos (POST/PUT/PATCH/DELETE) debe traer `Origin` o `Referer` del propio sitio; si no, responde 403 y deja en el log del servidor una línea que empieza por `[CSRF]` con la ruta, el origen y la IP. Los GET pasan siempre. Consecuencia: un `curl -X POST` a mano debe incluir `-H "Origin: https://tu-dominio"`.
+- **Límite de intentos por IP** (además del bloqueo por cuenta de la sección 10). Si se supera, se muestra un aviso y se pide esperar:
+
+  | Ruta | Máximo | Ventana |
+  |---|---|---|
+  | Login de administrador | 20 | 15 min |
+  | Recuperación de contraseña (admin) | 15 | 15 min |
+  | Login de estudiante | 60 | 15 min |
+  | Registro de estudiantes | 30 | 60 min |
+  | Recuperación de contraseña (estudiante) | 15 | 15 min |
+
+  Los de estudiante son más altos a propósito: un colegio suele salir a internet con una sola IP pública. Se ajustan en `middleware/rateLimit.js`. Los contadores viven en memoria y se reinician con cada deploy (el bloqueo por cuenta de la sección 10 sí está en la base de datos).
+- **Archivos subidos.** Los SVG se revisan al subirlos (se rechazan los que traen `<script>`, eventos `onload=...`, enlaces `javascript:` o referencias externas) y todo lo de `/uploads` se sirve con una CSP `sandbox` que impide ejecutar scripts aunque alguien abra el archivo directamente.
+- **Errores.** El usuario nunca ve el mensaje interno de una excepción (puede traer SQL o rutas); solo mensajes pensados para mostrarse (`utils/userError.js`) y los errores conocidos de subida de archivos. El detalle completo queda en el log del servidor.
+- **`/health`** responde `200` si el proceso está vivo. A propósito no consulta la base de datos, para que un fallo momentáneo de MySQL no haga que Railway reinicie la app. Railway lo usa como healthcheck (`railway.json`).
+
+---
+
+## 18. Pruebas automáticas
+
+```bash
+npm test
+```
+
+Usa el ejecutor integrado de Node (`node:test`, sin dependencias nuevas) y **no necesita base de datos ni variables de entorno**: prueba funciones puras (política de contraseñas, validadores, citas APA, revisión de SVG, claves de bloqueo, contexto de petición, configuración del primer administrador) y, con objetos simulados, los middleware de seguridad y el **ejecutor de migraciones** (orden, omisión de lo ya aplicado, errores). También vigila que `schema.sql` no vuelva a traer un admin con contraseña conocida, que las migraciones estén numeradas sin saltos y sin `USE`/`DROP`, y que todo tipo de acción registrado en el historial esté definido. Los archivos están en `tests/*.test.js`.
+
+En GitHub, el workflow `.github/workflows/ci.yml` corre la revisión de sintaxis y las pruebas en cada `push` y pull request, sin servicios extra.
+
+---
+
+## 19. Próximos pasos sugeridos
+
+- Activar la CSP (`CSP_ENFORCE=true`) cuando la consola salga limpia (sección 17).
+- Pasar los `migrate_*.sql` antiguos a `database/migrations/` para que una base **nueva** se arme completa sin pasos manuales (hoy necesita `schema.sql` y los `migrate_*.sql` una vez, y esos archivos traen `USE biblioteca_virtual;` fijo).
+- Regenerar el identificador de sesión al iniciar sesión (`req.session.regenerate`) para cerrar la fijación de sesión.
+- Verificación en dos pasos (2FA) para cuentas con permiso de gestión.
+- Cuando se use una segunda instancia en Railway, pasar el límite por IP (hoy en memoria) a la base de datos.

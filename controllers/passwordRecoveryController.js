@@ -6,6 +6,8 @@ const EmailConfirmation = require('../models/EmailConfirmation');
 const { sendMail } = require('../config/mailer');
 const { temporaryPasswordEmail } = require('../utils/emailTemplates');
 const { isPasswordValid, passwordHint } = require('../utils/passwordPolicy');
+const { lockoutKeys } = require('../utils/lockoutKeys');
+const { clientIp } = require('../utils/requestContext');
 
 const SCHOOL_NAME = () => Settings.get().school_name;
 
@@ -55,7 +57,7 @@ exports.submitUsername = async (req, res) => {
 // Paso 2: verificar la respuesta a la pregunta de seguridad
 exports.submitAnswer = async (req, res) => {
   const { username, answer, question } = req.body;
-  const lockoutId = `secquestion:${(username || '').trim().toLowerCase()}`;
+  const keys = lockoutKeys('secquestion', username, clientIp(req));
 
   if (!req.session.pwRecoveryUsername || req.session.pwRecoveryUsername !== username) {
     req.flash('error', 'Tu sesión de recuperación expiró. Empieza de nuevo.');
@@ -63,7 +65,7 @@ exports.submitAnswer = async (req, res) => {
   }
 
   try {
-    const lockStatus = await LoginLockout.check(lockoutId);
+    const lockStatus = await LoginLockout.checkAny(keys);
     if (lockStatus.locked) {
       return res.render('admin/forgot-password-question', {
         pageTitle: 'Pregunta de seguridad',
@@ -76,7 +78,7 @@ exports.submitAnswer = async (req, res) => {
 
     const admin = await Admin.verifySecurityAnswer(username, answer);
     if (!admin) {
-      const result = await LoginLockout.recordFailure(lockoutId);
+      const result = await LoginLockout.recordFailureAll(keys);
       const msg = result.lockedNow
         ? `Demasiados intentos fallidos. Esta verificación quedó bloqueada por ${LoginLockout.LOCK_DURATION_MINUTES} minutos.`
         : `La respuesta no es correcta. Te quedan ${result.attemptsLeft} intento${result.attemptsLeft === 1 ? '' : 's'}. Si no la recuerdas, pide a un administrador con permiso de gestión que te asigne una contraseña temporal.`;
@@ -89,7 +91,7 @@ exports.submitAnswer = async (req, res) => {
       });
     }
 
-    await LoginLockout.recordSuccess(lockoutId);
+    await LoginLockout.recordSuccessAll(keys);
     req.session.pwRecoveryVerifiedAt = Date.now();
     res.render('admin/forgot-password-reset', {
       pageTitle: 'Nueva contraseña',
@@ -145,6 +147,13 @@ exports.submitReset = async (req, res) => {
     }
 
     await Admin.setPassword(admin.id, password);
+    await ActivityLog.log({
+      adminId: admin.id,
+      adminUsername: admin.username,
+      actorType: 'anonymous',
+      actionType: 'admin_password_recovered',
+      entityLabel: admin.username,
+    });
     clearRecoverySession(req);
     req.flash('success', 'Tu contraseña se actualizó correctamente. Ya puedes iniciar sesión.');
     res.redirect('/admin/login');

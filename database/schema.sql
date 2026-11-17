@@ -159,15 +159,13 @@ CREATE TABLE IF NOT EXISTS activity_log (
 ) ENGINE=InnoDB;
 
 -- ---------------------------------------------------------
--- Admin por defecto → usuario: admin / contraseña: biblioteca123
--- Este es el ÚNICO admin con permiso para gestionar otras
--- cuentas de administrador desde el inicio (can_manage_admins = 1).
--- Pregunta de seguridad de ejemplo (para probar la recuperación
--- de contraseña): "¿De qué color es el tema de la biblioteca?" → verde
+-- Primer administrador
+-- Ya NO se crea un admin con contraseña conocida aquí. Al arrancar, si
+-- la tabla admins está vacía, la app crea el primer gestor a partir de
+-- las variables de entorno INITIAL_ADMIN_USERNAME e
+-- INITIAL_ADMIN_PASSWORD (ver .env.example y README, sección 8), y
+-- esa persona debe cambiar la contraseña en su primer ingreso.
 -- ---------------------------------------------------------
-INSERT INTO admins (username, password_hash, full_name, can_manage_admins, security_question, security_answer_hash) VALUES
-('admin', '$2a$10$pSl5YAcRdw2NzKnTfzemTeQ4.7u/mjs1Uan17UdGQhv1HZzbsKFIq', 'Administrador de Biblioteca', 1, '¿De qué color es el tema de esta biblioteca virtual?', '$2a$10$trdgKEW0W1.fRXhlz/qVa.2WdMUk9HyU9GVW2jECKIJiircZjChQO')
-ON DUPLICATE KEY UPDATE username = username;
 
 -- ---------------------------------------------------------
 -- Categorías de ejemplo (normalizadas, sin duplicados)

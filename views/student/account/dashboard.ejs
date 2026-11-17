@@ -14,6 +14,7 @@
       <%= student.email %><% if (student.student_code) { %> · Código <%= student.student_code %><% } %><% if (student.grade) { %> · <%= student.grade %><% } %>
     </p>
 
+    <% if (modules.prestamos) { %>
     <div class="stat-grid" style="margin-bottom:28px;">
       <div class="stat-card">
         <div class="stat-label">Préstamos activos</div>
@@ -32,9 +33,10 @@
         <div class="stat-value"><%= stats.currently_overdue %></div>
       </div>
     </div>
+    <% } %>
 
     <div style="display:flex; gap:12px; flex-wrap:wrap;">
-      <a href="/mi-cuenta/prestamos" class="btn btn-gold">Ver mis préstamos</a>
+      <% if (modules.prestamos) { %><a href="/mi-cuenta/prestamos" class="btn btn-gold">Ver mis préstamos</a><% } %>
       <a href="/catalogo" class="btn btn-outline">Ir al catálogo</a>
     </div>
   </div>

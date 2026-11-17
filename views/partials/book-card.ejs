@@ -7,7 +7,7 @@
     <% } %>
   </div>
   <div class="book-card-body">
-    <span class="book-category-tag"><%= b.category %></span>
+    <% if (modules.categorias) { %><span class="book-category-tag"><%= b.category %></span><% } %>
     <h3 class="book-title"><%= b.title %></h3>
     <p class="book-author"><%= b.author %></p>
     <div class="book-meta-row">

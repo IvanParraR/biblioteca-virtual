@@ -16,6 +16,7 @@
         <label for="q">Buscar</label>
         <input type="text" id="q" name="q" value="<%= filters.q %>" placeholder="Título, autor o ISBN…">
       </div>
+      <% if (modules.categorias) { %>
       <div class="field">
         <label for="category">Categoría</label>
         <select id="category" name="category">
@@ -25,6 +26,7 @@
           <% }) %>
         </select>
       </div>
+      <% } %>
       <div class="field">
         <label for="availability">Disponibilidad</label>
         <select id="availability" name="availability">
