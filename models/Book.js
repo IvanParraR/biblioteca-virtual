@@ -17,6 +17,7 @@
 //   - "no_disponible"     → total_copies === 0
 // ============================================================
 const { pool } = require('../config/db');
+const { buildLoanableSearch } = require('../utils/loanableSearch');
 
 const STATUS_LABELS = {
   disponible: 'Disponible',
@@ -128,6 +129,33 @@ const Book = {
   async all() {
     const [rows] = await pool.query(`${SELECT_BASE} ORDER BY b.title ASC`);
     return rows.map(attachStatus);
+  },
+
+  // Libros que se pueden prestar ahora (con copias libres y que no son
+  // de solo consulta en sala) cuyo título, autor o ISBN coincide con lo
+  // escrito. Pensado para el buscador en vivo del formulario de préstamo:
+  // devuelve pocos resultados (limit), con los títulos que EMPIEZAN con
+  // lo escrito primero. Ver utils/loanableSearch.js.
+  async searchLoanable(q, limit = 15) {
+    const search = buildLoanableSearch(q);
+    if (!search) return [];
+    const [rows] = await pool.query(
+      `SELECT b.id, b.title, b.author, b.isbn, b.available_copies,
+              (b.title LIKE ?) AS starts_phrase, (b.title LIKE ?) AS starts_word
+         FROM books b
+        WHERE ${search.whereSql}
+        ORDER BY starts_phrase DESC, starts_word DESC, b.title ASC
+        LIMIT ?`,
+      [search.phraseLike, search.firstWordLike, ...search.whereParams, limit]
+    );
+    return rows;
+  },
+
+  async countLoanable() {
+    const [[row]] = await pool.query(
+      'SELECT COUNT(*) AS total FROM books WHERE available_copies > 0 AND library_only = 0'
+    );
+    return row.total;
   },
 
   // Igual que search(), pero sin paginar — devuelve TODOS los

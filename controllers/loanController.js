@@ -68,14 +68,21 @@ exports.list = async (req, res) => {
 
 exports.showNewForm = async (req, res) => {
   try {
-    const allBooks = await Book.all();
-    const availableBooks = allBooks.filter((b) => b.available_copies > 0 && !b.library_only);
+    // Ya no se cargan todos los libros en una lista desplegable: el libro
+    // se busca escribiendo (ver searchBooks). Aquí solo se necesita saber
+    // si hay algo prestable y, si llegaron con ?book_id=, ese libro.
+    const requestedId = parseInt(req.query.book_id, 10);
+    const [loanableCount, candidate] = await Promise.all([
+      Book.countLoanable(),
+      Number.isInteger(requestedId) ? Book.findById(requestedId) : null,
+    ]);
+    const preselectedBook = candidate && candidate.available_copies > 0 && !candidate.library_only ? candidate : null;
     res.render('admin/new-loan', {
       pageTitle: 'Nuevo préstamo',
       schoolName: SCHOOL_NAME(),
       admin: req.session.admin,
-      books: availableBooks,
-      preselectedBookId: req.query.book_id ? parseInt(req.query.book_id, 10) : null,
+      loanableCount,
+      preselectedBook,
       defaultDueDate: Loan.defaultDueDate(),
       loanDays: Loan.loanDaysDefault(),
       formValues: {},
@@ -84,6 +91,26 @@ exports.showNewForm = async (req, res) => {
     console.error(err);
     req.flash('error', 'No se pudo cargar el formulario de préstamo.');
     res.redirect('/admin/loans');
+  }
+};
+
+// Usado por el buscador de libros del formulario de préstamo: solo
+// devuelve libros prestables, hasta 15, mientras el admin escribe.
+exports.searchBooks = async (req, res) => {
+  const q = (req.query.q || '').trim();
+  if (q.length < 1) return res.json([]);
+  try {
+    const books = await Book.searchLoanable(q, 15);
+    res.json(books.map((b) => ({
+      id: b.id,
+      title: b.title,
+      author: b.author,
+      isbn: b.isbn,
+      available_copies: b.available_copies,
+    })));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json([]);
   }
 };
 

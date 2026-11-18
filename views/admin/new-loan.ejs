@@ -16,17 +16,19 @@
   <div class="form-card">
     <form action="/admin/loans" method="POST">
       <div class="form-grid">
-        <div class="field field-full">
-          <label for="book_id">Libro *</label>
-          <select id="book_id" name="book_id" required <%= books.length === 0 ? 'disabled' : '' %>>
-            <option value="">Selecciona un libro…</option>
-            <% books.forEach(b => { %>
-              <option value="<%= b.id %>" <%= preselectedBookId === b.id ? 'selected' : '' %>>
-                <%= b.title %> — <%= b.author %> (<%= b.available_copies %> disponible<%= b.available_copies === 1 ? '' : 's' %>)
-              </option>
-            <% }) %>
-          </select>
-          <% if (books.length === 0) { %>
+        <div class="field field-full" id="book-field">
+          <label for="book_search">Libro *</label>
+          <div class="autocomplete-wrap">
+            <input type="text" id="book_search" autocomplete="off"
+                   placeholder="Escribe el título, el autor o el ISBN del libro…"
+                   value="<%= preselectedBook ? preselectedBook.title + ' — ' + preselectedBook.author : '' %>"
+                   <%= loanableCount === 0 ? 'disabled' : '' %>>
+            <div id="book_suggestions" class="autocomplete-list" style="display:none;"></div>
+          </div>
+          <input type="hidden" id="book_id" name="book_id" value="<%= preselectedBook ? preselectedBook.id : '' %>">
+          <span class="field-hint" id="book_selected_hint"><%= preselectedBook ? 'Seleccionado: ' + preselectedBook.title : '' %></span>
+          <span class="field-hint" id="book_error_hint" style="color:var(--status-unavailable-fg); display:none;">Busca y selecciona un libro de la lista.</span>
+          <% if (loanableCount === 0) { %>
             <span class="field-hint">No hay libros disponibles para prestar en este momento (sin copias libres, o todos son de solo consulta en sala).</span>
           <% } %>
         </div>
@@ -71,7 +73,7 @@
       </div>
 
       <div style="display:flex; gap:10px; margin-top:26px;">
-        <button type="submit" class="btn btn-gold" <%= books.length === 0 ? 'disabled' : '' %>>Registrar préstamo</button>
+        <button type="submit" class="btn btn-gold" <%= loanableCount === 0 ? 'disabled' : '' %>>Registrar préstamo</button>
         <a href="/admin/loans" class="btn btn-outline">Cancelar</a>
       </div>
     </form>
@@ -79,91 +81,139 @@
 
   <script>
     (function () {
-      // ---------- Buscador de estudiantes con sugerencias en vivo ----------
-      const form = document.querySelector('form[action="/admin/loans"]');
-      const searchInput = document.getElementById('student_search');
-      const suggestionsBox = document.getElementById('student_suggestions');
-      const hiddenId = document.getElementById('student_id');
-      const selectedHint = document.getElementById('student_selected_hint');
-      const errorHint = document.getElementById('student_error_hint');
-      let debounceTimer = null;
-      let currentResults = [];
-      let activeIndex = -1;
-
-      function clearSelection() {
-        hiddenId.value = '';
-        selectedHint.textContent = '';
+      // Todo lo que viene del servidor (nombres de estudiantes, títulos)
+      // se escapa antes de insertarlo como HTML: un estudiante puede
+      // registrarse con cualquier nombre, y no debe poder inyectar código
+      // en la pantalla del bibliotecario.
+      function escapeHtml(value) {
+        return String(value == null ? '' : value).replace(/[&<>"']/g, function (c) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
       }
 
-      function renderSuggestions(students) {
-        currentResults = students;
-        activeIndex = -1;
-        if (students.length === 0) {
-          suggestionsBox.innerHTML = '<div class="autocomplete-empty">Sin coincidencias — puedes registrarlo como estudiante nuevo abajo.</div>';
-          suggestionsBox.style.display = 'block';
-          return;
+      // ---------- Buscador con sugerencias en vivo (libros y estudiantes) ----------
+      // En vez de cargar cientos de opciones en una lista desplegable, se
+      // consulta al servidor mientras se escribe y se muestran las
+      // coincidencias más cercanas (máx. 15).
+      function setupAutocomplete(cfg) {
+        const input = document.getElementById(cfg.inputId);
+        const box = document.getElementById(cfg.boxId);
+        const hidden = document.getElementById(cfg.hiddenId);
+        const hint = document.getElementById(cfg.hintId);
+        const errorHint = document.getElementById(cfg.errorId);
+        let timer = null;
+        let results = [];
+        let activeIndex = -1;
+        let requestSeq = 0; // descarta respuestas viejas que lleguen tarde
+
+        function clearSelection() {
+          hidden.value = '';
+          hint.textContent = '';
         }
-        suggestionsBox.innerHTML = students.map(function (s, i) {
-          const code = s.student_code ? '<span class="code">' + s.student_code + '</span> — ' : '';
-          const grade = s.grade ? ' <span style="color:var(--ink-400);">(' + s.grade + ')</span>' : '';
-          return '<div class="autocomplete-item" data-index="' + i + '">' + code + s.full_name + grade + '</div>';
-        }).join('');
-        suggestionsBox.style.display = 'block';
+
+        function hide() { box.style.display = 'none'; }
+
+        function paintActive() {
+          box.querySelectorAll('.autocomplete-item').forEach(function (el, i) {
+            el.classList.toggle('active', i === activeIndex);
+          });
+        }
+
+        function render(list) {
+          results = list;
+          activeIndex = -1;
+          if (list.length === 0) {
+            box.innerHTML = '<div class="autocomplete-empty">' + cfg.emptyText + '</div>';
+          } else {
+            box.innerHTML = list.map(function (item, i) {
+              return '<div class="autocomplete-item" data-index="' + i + '">' + cfg.renderItem(item) + '</div>';
+            }).join('');
+          }
+          box.style.display = 'block';
+        }
+
+        function select(item) {
+          hidden.value = item.id;
+          input.value = cfg.inputText(item);
+          hint.textContent = cfg.hintText(item);
+          errorHint.style.display = 'none';
+          hide();
+        }
+
+        input.addEventListener('input', function () {
+          clearSelection();
+          const q = input.value.trim();
+          clearTimeout(timer);
+          if (q.length < 1) { hide(); return; }
+          timer = setTimeout(function () {
+            const seq = ++requestSeq;
+            fetch(cfg.url + '?q=' + encodeURIComponent(q))
+              .then(function (r) { return r.json(); })
+              .then(function (list) { if (seq === requestSeq) render(list); })
+              .catch(hide);
+          }, 200);
+        });
+
+        box.addEventListener('click', function (e) {
+          const el = e.target.closest('.autocomplete-item');
+          if (!el) return;
+          const item = results[parseInt(el.dataset.index, 10)];
+          if (item) select(item);
+        });
+
+        input.addEventListener('keydown', function (e) {
+          if (box.style.display === 'none' || results.length === 0) return;
+          if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            activeIndex = Math.min(activeIndex + 1, results.length - 1);
+            paintActive();
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            activeIndex = Math.max(activeIndex - 1, 0);
+            paintActive();
+          } else if (e.key === 'Enter') {
+            e.preventDefault();
+            const item = results[activeIndex >= 0 ? activeIndex : 0];
+            if (item) select(item);
+          } else if (e.key === 'Escape') {
+            hide();
+          }
+        });
+
+        document.addEventListener('click', function (e) {
+          if (!e.target.closest('#' + cfg.fieldId)) hide();
+        });
+
+        return { input: input, hidden: hidden, errorHint: errorHint, clearSelection: clearSelection, hide: hide };
       }
 
-      function selectStudent(s) {
-        hiddenId.value = s.id;
-        searchInput.value = (s.student_code ? s.student_code + ' — ' : '') + s.full_name;
-        selectedHint.textContent = 'Seleccionado: ' + s.full_name;
-        errorHint.style.display = 'none';
-        suggestionsBox.style.display = 'none';
-      }
-
-      searchInput.addEventListener('input', function () {
-        clearSelection();
-        const q = searchInput.value.trim();
-        clearTimeout(debounceTimer);
-        if (q.length < 1) {
-          suggestionsBox.style.display = 'none';
-          return;
-        }
-        debounceTimer = setTimeout(function () {
-          fetch('/admin/students/search?q=' + encodeURIComponent(q))
-            .then(function (r) { return r.json(); })
-            .then(renderSuggestions)
-            .catch(function () { suggestionsBox.style.display = 'none'; });
-        }, 200);
+      const bookField = setupAutocomplete({
+        fieldId: 'book-field', inputId: 'book_search', boxId: 'book_suggestions',
+        hiddenId: 'book_id', hintId: 'book_selected_hint', errorId: 'book_error_hint',
+        url: '/admin/loans/available-books',
+        emptyText: 'Sin coincidencias entre los libros disponibles para préstamo.',
+        renderItem: function (b) {
+          const copies = b.available_copies + ' disponible' + (b.available_copies === 1 ? '' : 's');
+          const isbn = b.isbn ? ' · ISBN ' + escapeHtml(b.isbn) : '';
+          return '<strong>' + escapeHtml(b.title) + '</strong> — ' + escapeHtml(b.author) +
+                 ' <span style="color:var(--ink-400);">(' + copies + isbn + ')</span>';
+        },
+        inputText: function (b) { return b.title + ' — ' + b.author; },
+        hintText: function (b) { return 'Seleccionado: ' + b.title; },
       });
 
-      suggestionsBox.addEventListener('click', function (e) {
-        const item = e.target.closest('.autocomplete-item');
-        if (!item) return;
-        const idx = parseInt(item.dataset.index, 10);
-        if (currentResults[idx]) selectStudent(currentResults[idx]);
-      });
-
-      searchInput.addEventListener('keydown', function (e) {
-        if (suggestionsBox.style.display === 'none' || currentResults.length === 0) return;
-        const items = suggestionsBox.querySelectorAll('.autocomplete-item');
-        if (e.key === 'ArrowDown') {
-          e.preventDefault();
-          activeIndex = Math.min(activeIndex + 1, items.length - 1);
-          items.forEach(function (it, i) { it.classList.toggle('active', i === activeIndex); });
-        } else if (e.key === 'ArrowUp') {
-          e.preventDefault();
-          activeIndex = Math.max(activeIndex - 1, 0);
-          items.forEach(function (it, i) { it.classList.toggle('active', i === activeIndex); });
-        } else if (e.key === 'Enter') {
-          e.preventDefault();
-          const idx = activeIndex >= 0 ? activeIndex : 0;
-          if (currentResults[idx]) selectStudent(currentResults[idx]);
-        } else if (e.key === 'Escape') {
-          suggestionsBox.style.display = 'none';
-        }
-      });
-
-      document.addEventListener('click', function (e) {
-        if (!e.target.closest('#student-field')) suggestionsBox.style.display = 'none';
+      const studentField = setupAutocomplete({
+        fieldId: 'student-field', inputId: 'student_search', boxId: 'student_suggestions',
+        hiddenId: 'student_id', hintId: 'student_selected_hint', errorId: 'student_error_hint',
+        url: '/admin/students/search',
+        emptyText: 'Sin coincidencias — puedes registrarlo como estudiante nuevo abajo.',
+        renderItem: function (s) {
+          const code = s.student_code ? '<span class="code">' + escapeHtml(s.student_code) + '</span> — ' : '';
+          const grade = s.grade ? ' <span style="color:var(--ink-400);">(' + escapeHtml(s.grade) + ')</span>' : '';
+          return code + escapeHtml(s.full_name) + grade;
+        },
+        inputText: function (s) { return (s.student_code ? s.student_code + ' — ' : '') + s.full_name; },
+        hintText: function (s) { return 'Seleccionado: ' + s.full_name; },
       });
 
       // ---------- Toggle "+ Registrar estudiante nuevo" ----------
@@ -174,31 +224,37 @@
         const isOpening = wrap.style.display === 'none';
         wrap.style.display = isOpening ? 'block' : 'none';
         flag.value = isOpening ? '1' : '0';
-        searchInput.disabled = isOpening;
-        errorHint.style.display = 'none';
+        studentField.input.disabled = isOpening;
+        studentField.errorHint.style.display = 'none';
         if (isOpening) {
-          searchInput.value = '';
-          clearSelection();
-          suggestionsBox.style.display = 'none';
+          studentField.input.value = '';
+          studentField.clearSelection();
+          studentField.hide();
           document.getElementById('new_student_name').focus();
         } else {
           document.getElementById('new_student_name').value = '';
           document.getElementById('new_student_code').value = '';
           document.getElementById('new_student_grade').value = '';
-          searchInput.focus();
+          studentField.input.focus();
         }
       });
 
-      // ---------- Validación al enviar: el campo oculto student_id no
-      // valida solo (los navegadores ignoran "required" en inputs
-      // hidden), así que confirmamos a mano que haya un estudiante
-      // seleccionado o que se esté registrando uno nuevo. ----------
-      form.addEventListener('submit', function (e) {
-        const isNewStudent = document.getElementById('is_new_student').value === '1';
-        if (!isNewStudent && !hiddenId.value) {
+      // ---------- Validación al enviar: los campos ocultos no validan solos
+      // (los navegadores ignoran "required" en inputs hidden), así que
+      // confirmamos a mano que haya un libro seleccionado y un estudiante
+      // seleccionado (o uno nuevo en registro). ----------
+      document.querySelector('form[action="/admin/loans"]').addEventListener('submit', function (e) {
+        if (!bookField.hidden.value) {
           e.preventDefault();
-          errorHint.style.display = 'inline';
-          searchInput.focus();
+          bookField.errorHint.style.display = 'inline';
+          bookField.input.focus();
+          return;
+        }
+        const isNewStudent = document.getElementById('is_new_student').value === '1';
+        if (!isNewStudent && !studentField.hidden.value) {
+          e.preventDefault();
+          studentField.errorHint.style.display = 'inline';
+          studentField.input.focus();
         }
       });
     })();

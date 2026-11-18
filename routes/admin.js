@@ -35,6 +35,7 @@ router.get('/dashboard', adminController.dashboard);
 router.get('/loans', loansModule, loanController.list);
 router.get('/loans/new', loansModule, loanController.showNewForm);
 router.get('/students/search', loansModule, loanController.searchStudents);
+router.get('/loans/available-books', loansModule, loanController.searchBooks);
 router.post('/loans', loansModule, loanController.create);
 router.post('/loans/:id/return', loansModule, loanController.markReturned);
 router.post('/loans/:id/renew', loansModule, loanController.renew);
