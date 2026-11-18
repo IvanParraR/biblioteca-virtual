@@ -106,3 +106,22 @@ test('Fuentes abiertas: en celular las columnas se apilan con los resultados arr
 test('Fuentes abiertas: el texto ya no dice "a la izquierda" (en celular no es cierto)', () => {
   assert.doesNotMatch(openSources.replace(/<!--[\s\S]*?-->/g, ''), /a la izquierda/);
 });
+
+// ---------- Inicio: barra de búsqueda ----------
+test('Inicio: el campo de la barra de búsqueda puede encogerse (el botón no se sale)', () => {
+  assert.match(css, /input, select, textarea \{ min-width: 0; max-width: 100%; \}/);
+  assert.match(css, /\.search-card input\[type="text"\] \{ min-width: 0; \}/);
+});
+
+test('Inicio: en celulares muy angostos la barra de búsqueda usa menos relleno', () => {
+  const block = css.match(/@media \(max-width: 380px\) \{[\s\S]*?\n\}/);
+  assert.ok(block, 'falta el bloque de 380 px');
+  assert.match(block[0], /\.search-card \{ padding: 6px; gap: 6px; \}/);
+  assert.match(block[0], /\.search-card button \{ padding: 0 14px; \}/);
+});
+
+test('en celular, nada que se desborde puede ensanchar la página', () => {
+  const block = css.match(/@media \(max-width: 600px\) \{[\s\S]*?\n\}/);
+  assert.ok(block);
+  assert.match(block[0], /body \{ overflow-x: clip; \}/);
+});

@@ -34,8 +34,23 @@ body { overflow-wrap: break-word; }
 }
 .filter-bar > * { min-width: 0; }
 
+/* Lo mismo para cualquier campo dentro de una fila flex o de una cuadrícula
+   (por ejemplo, la barra de búsqueda del inicio: campo + botón "Buscar").
+   Sin esto el campo no baja de ~200 px, el botón se sale de la barra
+   blanca por el lado derecho y ensancha toda la página: la franja verde,
+   el título y los chips quedan corridos, y empeora mientras más angosto
+   es el teléfono. */
+input, select, textarea { min-width: 0; max-width: 100%; }
+.search-card input[type="text"] { min-width: 0; }
+
 @media (max-width: 600px) {
   .container { padding: 0 16px; }
+
+  /* Red de seguridad: si algún elemento llegara a desbordarse, no debe
+     ensanchar la página entera (que se vea corrida de lado). "clip" no
+     afecta al encabezado fijo ni a las tablas, que se desplazan dentro de
+     su propio contenedor. */
+  body { overflow-x: clip; }
 
   /* iPhone hace zoom automático al tocar un campo con letra menor a 16 px
      y la pantalla queda movida y ampliada. Los campos usaban 14,4 px. */
@@ -69,6 +84,9 @@ body { overflow-wrap: break-word; }
 /* Celulares muy angostos (iPhone SE, Android pequeños: 320–375 px). */
 @media (max-width: 380px) {
   .container { padding: 0 12px; }
+  .search-card { padding: 6px; gap: 6px; }
+  .search-card input[type="text"] { padding: 12px 10px; }
+  .search-card button { padding: 0 14px; }
   .book-grid { gap: 10px; }
   .book-title { font-size: 0.92rem; }
   .bar-row { grid-template-columns: 96px 1fr 44px; gap: 8px; }
