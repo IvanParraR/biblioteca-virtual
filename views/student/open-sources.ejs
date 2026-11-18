@@ -13,7 +13,7 @@
     <% if (successMsg && successMsg.length) { %><div class="alert alert-success"><%= successMsg[0] %></div><% } %>
     <% if (errorMsg && errorMsg.length) { %><div class="alert alert-error"><%= errorMsg[0] %></div><% } %>
 
-    <div style="display:flex; gap:8px; margin-bottom:20px; border-bottom:1px solid var(--forest-100); padding-bottom:14px;">
+    <div class="os-tabs" style="display:flex; gap:8px; margin-bottom:20px; border-bottom:1px solid var(--forest-100); padding-bottom:14px;">
       <a href="/fuentes-abiertas?tipo=libros<%= q ? '&q=' + encodeURIComponent(q) : '' %>" class="btn <%= tipo === 'libros' ? 'btn-primary' : 'btn-outline' %> btn-sm">Libros virtuales</a>
       <a href="/fuentes-abiertas?tipo=papers<%= q ? '&q=' + encodeURIComponent(q) : '' %>" class="btn <%= tipo === 'papers' ? 'btn-primary' : 'btn-outline' %> btn-sm">Artículos científicos</a>
     </div>
@@ -28,9 +28,9 @@
       manejan de forma impredecible (rompe los formularios que caen
       después del primero).
     -->
-    <div style="display:grid; grid-template-columns: 240px 1fr; gap:24px; align-items:start;">
+    <div class="os-layout" style="display:grid; grid-template-columns: 240px 1fr; gap:24px; align-items:start;">
       <!-- ---------- Búsqueda + Filtros (sidebar, es el <form>) ---------- -->
-      <form action="/fuentes-abiertas" method="GET" class="form-card" style="position:sticky; top:16px;">
+      <form action="/fuentes-abiertas" method="GET" class="form-card os-filters" style="position:sticky; top:16px;">
         <input type="hidden" name="tipo" value="<%= tipo %>">
 
         <div class="field" style="margin-bottom:16px;">
@@ -114,7 +114,7 @@
       </form>
 
       <!-- ---------- Resultados (fuera del <form> de arriba) ---------- -->
-      <div>
+      <div class="os-results">
         <% if (typeof sourceWarnings !== 'undefined' && sourceWarnings.length > 0 && !searchError) { %>
           <div class="alert alert-error" style="margin-bottom:14px;">
             <%= sourceWarnings.join(' ') %> Se muestran los resultados de la(s) fuente(s) que sí respondieron.
@@ -233,7 +233,7 @@
         <% } else { %>
           <div class="empty-state">
             <h3>Busca por título para empezar</h3>
-            <p>Escribe el título de <%= tipo === 'libros' ? 'un libro' : 'un artículo' %> a la izquierda — puedes afinar con los filtros.</p>
+            <p>Escribe el título de <%= tipo === 'libros' ? 'un libro' : 'un artículo' %> en el buscador — puedes afinar con los filtros.</p>
           </div>
         <% } %>
       </div>

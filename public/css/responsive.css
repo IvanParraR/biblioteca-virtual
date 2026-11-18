@@ -1,0 +1,96 @@
+/* ============================================================
+   AJUSTES PARA CELULARES
+   Se carga DESPUÉS de style.css (ver views/partials/head.ejs) y solo
+   corrige lo que se ve distinto o incómodo entre teléfonos. Todo lo
+   que cambia el diseño está dentro de media queries de pantalla
+   angosta: en computador no se nota nada.
+   ============================================================ */
+
+/* iOS agranda el texto al girar el teléfono; así se mantiene igual. */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+/* Un título o un ISBN larguísimo no debe ensanchar la página. */
+body { overflow-wrap: break-word; }
+
+/* 100vh incluye la zona detrás de la barra de direcciones del navegador
+   móvil (el contenido queda cortado abajo). 100dvh es el alto realmente
+   visible; los navegadores que no lo entienden usan el 100vh de arriba. */
+.login-shell { min-height: 100vh; min-height: 100dvh; }
+.admin-shell { min-height: calc(100vh - var(--header-h)); min-height: calc(100dvh - var(--header-h)); }
+
+/* Un campo de formulario nunca puede ser más ancho que su contenedor.
+   Dentro de una cuadrícula o flex, cada elemento tiene por defecto
+   "min-width: auto": no se encoge por debajo del ancho propio de su
+   contenido (un <select> mide lo que su opción más larga, un <input>
+   unos 20 caracteres) y empuja la tarjeta hacia afuera. Con min-width: 0
+   y ancho 100% se ajustan al espacio disponible. */
+.field { min-width: 0; }
+.field select,
+.field textarea,
+.field input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]) {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+.filter-bar > * { min-width: 0; }
+
+@media (max-width: 600px) {
+  .container { padding: 0 16px; }
+
+  /* iPhone hace zoom automático al tocar un campo con letra menor a 16 px
+     y la pantalla queda movida y ampliada. Los campos usaban 14,4 px. */
+  input, select, textarea { font-size: 16px; }
+
+  /* Tamaño mínimo cómodo para tocar con el dedo (recomendado: 44 px). */
+  .btn { min-height: 44px; }
+  .btn-sm { min-height: 40px; padding: 8px 14px; }
+
+  /* Con "auto-fill + mínimo 200 px" el catálogo pasaba de 1 a 2 columnas
+     según el ancho exacto del teléfono (360 px = 1 tarjeta enorme,
+     430 px = 2). Ahora siempre son 2, iguales en todos los celulares. */
+  .book-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  .category-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Barras de filtros (catálogo, y Libros / Estudiantes / Préstamos del admin).
+   Son una cuadrícula con columnas de mínimo 150 px, y el campo "Buscar"
+   trae escrito "grid-column: span 2" directamente en cada vista. Cuando
+   solo cabe una columna, ese "span 2" obliga a crear una segunda: la
+   cuadrícula pide ~312 px y la tarjeta tiene menos, así que los campos se
+   salen por la derecha. En pantallas angostas se pasa a una sola columna
+   y se anula el span (un estilo escrito en la vista solo se puede anular
+   con !important). */
+@media (max-width: 420px) {
+  .filter-bar { grid-template-columns: minmax(0, 1fr); padding: 14px; }
+  .filter-bar > .field { grid-column: auto !important; }
+}
+
+/* Celulares muy angostos (iPhone SE, Android pequeños: 320–375 px). */
+@media (max-width: 380px) {
+  .container { padding: 0 12px; }
+  .book-grid { gap: 10px; }
+  .book-title { font-size: 0.92rem; }
+  .bar-row { grid-template-columns: 96px 1fr 44px; gap: 8px; }
+  .admin-main { padding: 16px 12px 84px; }
+}
+
+/* ------------------------------------------------------------
+   FUENTES ABIERTAS
+   La vista trae escrito en línea "grid-template-columns: 240px 1fr":
+   un ancho fijo para los filtros y el resto para los resultados. En un
+   celular los resultados quedaban en ~100 px y el texto se partía palabra
+   por palabra. En pantallas angostas se apilan en una sola columna, con
+   los resultados ARRIBA y los filtros debajo. Un estilo escrito en la
+   vista solo se puede anular con !important. Para invertir el orden basta
+   cambiar los dos "order" (filtros: 1, resultados: 2).
+   ------------------------------------------------------------ */
+.os-tabs { flex-wrap: wrap; }
+.os-filters, .os-results { min-width: 0; }
+
+@media (max-width: 760px) {
+  .os-layout { grid-template-columns: minmax(0, 1fr) !important; }
+  .os-results { order: 1; }
+  .os-filters { order: 2; position: static !important; }
+}
+
